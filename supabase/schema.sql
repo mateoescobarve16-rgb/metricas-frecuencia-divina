@@ -1,21 +1,19 @@
 -- Ejecutar en el SQL Editor del dashboard de Supabase (mismo proyecto que usan los otros
--- productos, wqzuvkqutmumwpeuqfyr). Esta tabla es nueva e independiente: no modifica ni
--- depende de leads_compras ni de ninguna otra tabla existente.
+-- productos, wqzuvkqutmumwpeuqfyr). Todo vive en un schema propio, separado de "public"
+-- (donde está leads_compras y el resto de tablas del bot de WhatsApp) — no se toca ni se
+-- depende de nada existente.
 
-create table if not exists public.hotmart_eventos_raw (
+create schema if not exists panel_metricas;
+
+create table if not exists panel_metricas.hotmart_ventas (
   id bigint generated always as identity primary key,
-  recibido_en timestamptz not null default now(),
-  evento text,
-  transaction_id text,
+  transaction_id text not null unique,
+  fecha_venta timestamptz,
+  sincronizado_en timestamptz not null default now(),
   payload jsonb not null
 );
 
-create unique index if not exists hotmart_eventos_raw_dedupe
-  on public.hotmart_eventos_raw (transaction_id, evento)
-  where transaction_id is not null;
-
-alter table public.hotmart_eventos_raw enable row level security;
+alter table panel_metricas.hotmart_ventas enable row level security;
 
 -- Sin policies: nadie con la clave "anon"/pública puede leer ni escribir aquí.
--- El endpoint /api/webhooks/hotmart escribe usando la service_role key, que
--- ignora RLS por diseño.
+-- El cron diario escribe usando la service_role key, que ignora RLS por diseño.
