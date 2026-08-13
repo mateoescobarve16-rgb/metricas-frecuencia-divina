@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/cron/sync-hotmart", "schedule": "0 9 * * *" }
+  ]
+}
