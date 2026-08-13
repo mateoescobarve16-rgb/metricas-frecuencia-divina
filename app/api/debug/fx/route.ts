@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { precargarTasas, convertirAUsd } from "@/lib/fx/rates";
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
@@ -6,15 +7,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  try {
-    const res = await fetch("https://open.er-api.com/v6/latest/USD");
-    const text = await res.text();
-    return NextResponse.json({ ok: true, status: res.status, body: text.slice(0, 500) });
-  } catch (error) {
-    return NextResponse.json({
-      ok: false,
-      error: String(error),
-      cause: error instanceof Error && error.cause ? String(error.cause) : null,
-    });
-  }
+  await precargarTasas();
+  const resultado = convertirAUsd(777.2, "MXN");
+
+  return NextResponse.json({ resultado });
 }
