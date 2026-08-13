@@ -1,6 +1,6 @@
 import { crearClienteSupabaseAdmin } from "../supabase/admin";
 import { listarVentasPorRango } from "./client";
-import { precargarTasas, convertirAUsd } from "../fx/rates";
+import { obtenerTasas, convertirAUsd } from "../fx/rates";
 
 export async function sincronizarVentas(startDate: number, endDate: number) {
   const ventas = await listarVentasPorRango(startDate, endDate);
@@ -8,7 +8,7 @@ export async function sincronizarVentas(startDate: number, endDate: number) {
     return { insertadas: 0, total: 0 };
   }
 
-  await precargarTasas();
+  const tasas = await obtenerTasas();
 
   const supabase = crearClienteSupabaseAdmin();
   const filas = ventas.map((v) => ({
@@ -20,7 +20,7 @@ export async function sincronizarVentas(startDate: number, endDate: number) {
     fecha_venta: v.fechaVenta,
     price_value: v.priceValue,
     price_currency: v.priceCurrency,
-    price_usd: v.priceValue !== null && v.priceCurrency ? convertirAUsd(v.priceValue, v.priceCurrency) : null,
+    price_usd: v.priceValue !== null && v.priceCurrency ? convertirAUsd(v.priceValue, v.priceCurrency, tasas) : null,
     is_subscription: v.isSubscription,
     tracking: v.tracking,
     payload: v.payload,

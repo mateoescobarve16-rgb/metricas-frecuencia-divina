@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { sincronizarMeta } from "@/lib/meta/sync";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

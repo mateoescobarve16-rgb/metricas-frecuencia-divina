@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { sincronizarVentas } from "@/lib/hotmart/sync";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
