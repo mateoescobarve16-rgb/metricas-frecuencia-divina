@@ -1,5 +1,5 @@
-import { crearClienteSupabaseAdmin } from "../lib/supabase/admin.ts";
-import { clasificarVenta } from "../lib/hotmart/mapeoProductos.ts";
+import { crearClienteSupabaseAdmin } from "../lib/supabase/admin";
+import { clasificarVenta } from "../lib/hotmart/mapeoProductos";
 
 const supabase = crearClienteSupabaseAdmin();
 

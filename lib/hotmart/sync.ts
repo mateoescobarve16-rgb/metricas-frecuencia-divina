@@ -1,5 +1,5 @@
-import { crearClienteSupabaseAdmin } from "../supabase/admin.ts";
-import { listarVentasPorRango } from "./client.ts";
+import { crearClienteSupabaseAdmin } from "../supabase/admin";
+import { listarVentasPorRango } from "./client";
 
 export async function sincronizarVentas(startDate: number, endDate: number) {
   const ventas = await listarVentasPorRango(startDate, endDate);

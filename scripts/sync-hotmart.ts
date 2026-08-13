@@ -1,4 +1,4 @@
-import { sincronizarVentas } from "../lib/hotmart/sync.ts";
+import { sincronizarVentas } from "../lib/hotmart/sync";
 
 const dias = Number(process.argv[2] ?? "1");
 const endDate = Date.now();
