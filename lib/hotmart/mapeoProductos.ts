@@ -33,3 +33,15 @@ export function clasificarVenta(productId: number, offerCode: string): Categoria
 
   return "sin_clasificar";
 }
+
+export const ETIQUETAS_CATEGORIA: Record<CategoriaFunnel, string> = {
+  front_end: "Front-end",
+  upsell_01: "Upsell 01",
+  downsell_01: "Downsell 01",
+  upsell_02: "Upsell 02",
+  downsell_02: "Downsell 02",
+  upsell_03: "Upsell 03",
+  downsell_03: "Downsell 03",
+  miembros: "Área de miembros",
+  sin_clasificar: "Sin clasificar",
+};
