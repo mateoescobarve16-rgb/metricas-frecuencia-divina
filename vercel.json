@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/sync-hotmart", "schedule": "0 9 * * *" }
+    { "path": "/api/cron/sync-hotmart", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/sync-meta", "schedule": "5 9 * * *" }
   ]
 }
