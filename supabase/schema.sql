@@ -11,6 +11,7 @@ create table if not exists public.hotmart_ventas (
   fecha_venta timestamptz not null,
   price_value numeric,
   price_currency text,
+  price_usd numeric,
   is_subscription boolean not null default false,
   tracking jsonb,
   sincronizado_en timestamptz not null default now(),
