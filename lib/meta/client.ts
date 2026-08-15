@@ -22,25 +22,29 @@ export type CuentaPublicitaria = {
 // Cuentas compartidas (como cliente) con la BM matriz. Esto es automático: cuando se
 // agrega o quita una cuenta de otra BM por temas de bloqueos, esta lista se ajusta sola,
 // sin necesidad de reasignar nada manualmente.
-export async function listarCuentasActivas(): Promise<CuentaPublicitaria[]> {
+//
+// Importante: se traen TODAS las cuentas devueltas por client_ad_accounts, sin filtrar
+// por account_status. Una cuenta puede gastar dinero real un dia y quedar deshabilitada
+// (bloqueada) al dia siguiente, antes de que corra el cron -- si filtraramos por "activa",
+// perderiamos ese gasto real para siempre. Pedir insights de una cuenta sin actividad no
+// cuesta nada (Meta responde vacio), asi que no hay downside en incluirlas todas.
+export async function listarCuentasCompartidas(): Promise<CuentaPublicitaria[]> {
   const businessId = process.env.META_BUSINESS_ID!;
   const cuentas: CuentaPublicitaria[] = [];
   let after: string | undefined;
 
   do {
-    const params: Record<string, string> = { fields: "id,name,account_status,business" };
+    const params: Record<string, string> = { fields: "id,name,business" };
     if (after) params.after = after;
 
     const body = await get(`/${businessId}/client_ad_accounts`, params);
     for (const c of body.data ?? []) {
-      if (c.account_status === 1) {
-        cuentas.push({
-          id: c.id,
-          nombre: c.name,
-          bmOrigenId: c.business?.id ?? null,
-          bmOrigenNombre: c.business?.name ?? null,
-        });
-      }
+      cuentas.push({
+        id: c.id,
+        nombre: c.name,
+        bmOrigenId: c.business?.id ?? null,
+        bmOrigenNombre: c.business?.name ?? null,
+      });
     }
 
     after = body.paging?.next ? body.paging.cursors?.after : undefined;

@@ -1,8 +1,8 @@
 import { crearClienteSupabaseAdmin } from "../supabase/admin";
-import { listarCuentasActivas, obtenerInsightsDiarios } from "./client";
+import { listarCuentasCompartidas, obtenerInsightsDiarios } from "./client";
 
 export async function sincronizarMeta(since: string, until: string) {
-  const cuentas = await listarCuentasActivas();
+  const cuentas = await listarCuentasCompartidas();
   const supabase = crearClienteSupabaseAdmin();
   let filasTotal = 0;
 

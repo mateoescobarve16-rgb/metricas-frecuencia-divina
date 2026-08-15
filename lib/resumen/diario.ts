@@ -52,24 +52,51 @@ function categoriaVacia(): Record<CategoriaFunnel, { conteo: number; facturacion
   return obj;
 }
 
+// Supabase/PostgREST limita cada respuesta a un maximo de filas (tipicamente 1000),
+// sin importar cuantas pida uno -- hay que paginar explicitamente o se pierden datos
+// en silencio (esto causaba que fechas recientes desaparecieran del panel una vez que
+// hotmart_ventas paso de 1000 filas).
+async function obtenerTodasLasFilas<T>(
+  construirQuery: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const TAMANO_PAGINA = 1000;
+  const resultado: T[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await construirQuery(offset, offset + TAMANO_PAGINA - 1);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+
+    resultado.push(...data);
+    if (data.length < TAMANO_PAGINA) break;
+    offset += TAMANO_PAGINA;
+  }
+
+  return resultado;
+}
+
 export async function obtenerResumenDiario(desde: string, hasta: string): Promise<ResumenDia[]> {
   const supabase = crearClienteSupabaseAdmin();
 
-  const [{ data: ventas, error: errorVentas }, { data: metaFilas, error: errorMeta }] = await Promise.all([
-    supabase
-      .from("hotmart_ventas")
-      .select("product_id, offer_code, status, price_usd, fecha_venta")
-      .gte("fecha_venta", `${desde}T00:00:00Z`)
-      .lt("fecha_venta", `${hasta}T23:59:59.999Z`),
-    supabase
-      .from("meta_ads_diario")
-      .select("fecha, spend, impressions, clicks, landing_page_views, pagos_iniciados")
-      .gte("fecha", desde)
-      .lte("fecha", hasta),
+  const [ventas, metaFilas] = await Promise.all([
+    obtenerTodasLasFilas((desdeI, hastaI) =>
+      supabase
+        .from("hotmart_ventas")
+        .select("product_id, offer_code, status, price_usd, fecha_venta")
+        .gte("fecha_venta", `${desde}T00:00:00Z`)
+        .lt("fecha_venta", `${hasta}T23:59:59.999Z`)
+        .range(desdeI, hastaI)
+    ),
+    obtenerTodasLasFilas((desdeI, hastaI) =>
+      supabase
+        .from("meta_ads_diario")
+        .select("fecha, spend, impressions, clicks, landing_page_views, pagos_iniciados")
+        .gte("fecha", desde)
+        .lte("fecha", hasta)
+        .range(desdeI, hastaI)
+    ),
   ]);
-
-  if (errorVentas) throw new Error(`Error leyendo hotmart_ventas: ${errorVentas.message}`);
-  if (errorMeta) throw new Error(`Error leyendo meta_ads_diario: ${errorMeta.message}`);
 
   const porFecha = new Map<string, ResumenDia>();
 
