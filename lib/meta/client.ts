@@ -57,11 +57,18 @@ export type InsightDiario = {
   cpc: number;
   ctr: number;
   cpm: number;
+  landingPageViews: number;
+  pagosIniciados: number;
 };
+
+function extraerAccion(actions: any[] | undefined, tipo: string): number {
+  const accion = actions?.find((a) => a.action_type === tipo);
+  return accion ? Number(accion.value) : 0;
+}
 
 export async function obtenerInsightsDiarios(adAccountId: string, since: string, until: string): Promise<InsightDiario[]> {
   const body = await get(`/${adAccountId}/insights`, {
-    fields: "spend,impressions,clicks,cpc,ctr,cpm",
+    fields: "spend,impressions,clicks,cpc,ctr,cpm,actions",
     time_range: JSON.stringify({ since, until }),
     time_increment: "1",
   });
@@ -74,5 +81,7 @@ export async function obtenerInsightsDiarios(adAccountId: string, since: string,
     cpc: Number(d.cpc ?? 0),
     ctr: Number(d.ctr ?? 0),
     cpm: Number(d.cpm ?? 0),
+    landingPageViews: extraerAccion(d.actions, "landing_page_view"),
+    pagosIniciados: extraerAccion(d.actions, "initiate_checkout"),
   }));
 }

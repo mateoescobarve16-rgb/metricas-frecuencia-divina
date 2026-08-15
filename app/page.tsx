@@ -114,7 +114,23 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
         <table style={{ width: "100%", fontSize: 13, whiteSpace: "nowrap" }}>
           <thead>
             <tr style={{ borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)" }}>
-              {["Fecha", "Inversión", "Impresiones", "Clics", "CPC", "CTR", "CPM", ...CATEGORIAS_TABLA.map((c) => ETIQUETAS_CATEGORIA[c]), "Facturación", "Ticket medio", "ROAS"].map(
+              {[
+                "Fecha",
+                "Inversión",
+                "Impresiones",
+                "Clics",
+                "CPC",
+                "CTR",
+                "CPM",
+                "Visitas LP",
+                "Costo/Visita",
+                "Pagos iniciados",
+                "Costo/Pago iniciado",
+                ...CATEGORIAS_TABLA.map((c) => ETIQUETAS_CATEGORIA[c]),
+                "Facturación",
+                "Ticket medio",
+                "ROAS",
+              ].map(
                 (h) => (
                   <th key={h} style={{ textAlign: "right", padding: "8px 10px", color: "var(--text-secondary)", fontWeight: 500 }}>
                     {h}
@@ -133,6 +149,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.cpc)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoPct(dia.ctr)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.cpm)}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoNumero(dia.landingPageViews)}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.costoPorVisita)}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoNumero(dia.pagosIniciados)}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.costoPorPagoIniciado)}</td>
                 {CATEGORIAS_TABLA.map((c) => (
                   <td key={c} style={{ padding: "8px 10px", textAlign: "right" }}>
                     {formatoNumero(dia.porCategoria[c].conteo)}

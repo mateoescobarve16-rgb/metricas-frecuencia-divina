@@ -49,6 +49,8 @@ create table if not exists public.meta_ads_diario (
   cpc numeric,
   ctr numeric,
   cpm numeric,
+  landing_page_views bigint,
+  pagos_iniciados bigint,
   sincronizado_en timestamptz not null default now(),
   unique (ad_account_id, fecha)
 );

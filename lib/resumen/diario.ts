@@ -36,6 +36,10 @@ export type ResumenDia = {
   cpc: number | null;
   ctr: number | null;
   cpm: number | null;
+  landingPageViews: number;
+  costoPorVisita: number | null;
+  pagosIniciados: number;
+  costoPorPagoIniciado: number | null;
   porCategoria: Record<CategoriaFunnel, { conteo: number; facturacion: number }>;
   facturacionTotal: number;
   ticketMedio: number | null;
@@ -59,7 +63,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
       .lt("fecha_venta", `${hasta}T23:59:59.999Z`),
     supabase
       .from("meta_ads_diario")
-      .select("fecha, spend, impressions, clicks")
+      .select("fecha, spend, impressions, clicks, landing_page_views, pagos_iniciados")
       .gte("fecha", desde)
       .lte("fecha", hasta),
   ]);
@@ -80,6 +84,10 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
         cpc: null,
         ctr: null,
         cpm: null,
+        landingPageViews: 0,
+        costoPorVisita: null,
+        pagosIniciados: 0,
+        costoPorPagoIniciado: null,
         porCategoria: categoriaVacia(),
         facturacionTotal: 0,
         ticketMedio: null,
@@ -95,6 +103,8 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     dia.inversion += Number(fila.spend ?? 0);
     dia.impresiones += Number(fila.impressions ?? 0);
     dia.clics += Number(fila.clicks ?? 0);
+    dia.landingPageViews += Number(fila.landing_page_views ?? 0);
+    dia.pagosIniciados += Number(fila.pagos_iniciados ?? 0);
   }
 
   for (const venta of ventas ?? []) {
@@ -116,6 +126,8 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     dia.cpc = dia.clics > 0 ? dia.inversion / dia.clics : null;
     dia.ctr = dia.impresiones > 0 ? (dia.clics / dia.impresiones) * 100 : null;
     dia.cpm = dia.impresiones > 0 ? (dia.inversion / dia.impresiones) * 1000 : null;
+    dia.costoPorVisita = dia.landingPageViews > 0 ? dia.inversion / dia.landingPageViews : null;
+    dia.costoPorPagoIniciado = dia.pagosIniciados > 0 ? dia.inversion / dia.pagosIniciados : null;
 
     const totalConversiones = CATEGORIAS.reduce((acc, c) => acc + dia.porCategoria[c].conteo, 0);
     dia.ticketMedio = totalConversiones > 0 ? dia.facturacionTotal / totalConversiones : null;

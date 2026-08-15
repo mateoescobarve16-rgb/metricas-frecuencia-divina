@@ -22,6 +22,8 @@ export async function sincronizarMeta(since: string, until: string) {
       cpc: i.cpc,
       ctr: i.ctr,
       cpm: i.cpm,
+      landing_page_views: i.landingPageViews,
+      pagos_iniciados: i.pagosIniciados,
     }));
 
     const { error } = await supabase
