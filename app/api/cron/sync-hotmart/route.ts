@@ -10,18 +10,28 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
-  // Por defecto sincroniza una ventana de los ultimos 4 dias (no solo "ayer"): si una
-  // corrida falla un dia, la siguiente lo reintenta sola, sin quedar un hueco permanente.
-  // ?dias=N permite pedir una ventana mas grande para respaldos historicos puntuales.
-  const dias = Number(url.searchParams.get("dias") ?? "4");
+  const desdeParam = url.searchParams.get("desde"); // YYYY-MM-DD, para respaldos puntuales
+  const hastaParam = url.searchParams.get("hasta"); // YYYY-MM-DD
 
-  const ahora = new Date();
-  const inicioHoyUTC = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate());
-  const inicioVentanaUTC = inicioHoyUTC - dias * 24 * 60 * 60 * 1000;
+  let inicioVentanaUTC: number;
+  let inicioHoyUTC: number;
+
+  if (desdeParam && hastaParam) {
+    inicioVentanaUTC = new Date(`${desdeParam}T00:00:00Z`).getTime();
+    inicioHoyUTC = new Date(`${hastaParam}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000;
+  } else {
+    // Por defecto sincroniza una ventana de los ultimos 4 dias (no solo "ayer"): si una
+    // corrida falla un dia, la siguiente lo reintenta sola, sin quedar un hueco permanente.
+    // ?dias=N permite pedir una ventana mas grande (respaldo desde "hoy" hacia atras).
+    const dias = Number(url.searchParams.get("dias") ?? "4");
+    const ahora = new Date();
+    inicioHoyUTC = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate());
+    inicioVentanaUTC = inicioHoyUTC - dias * 24 * 60 * 60 * 1000;
+  }
 
   try {
     const resultado = await sincronizarVentas(inicioVentanaUTC, inicioHoyUTC);
-    return NextResponse.json({ ok: true, dias, ...resultado });
+    return NextResponse.json({ ok: true, ...resultado });
   } catch (error) {
     console.error("Error en sync diario de Hotmart:", error);
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
