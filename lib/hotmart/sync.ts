@@ -22,6 +22,7 @@ export async function sincronizarVentas(startDate: number, endDate: number) {
     price_currency: v.priceCurrency,
     price_usd: v.priceValue !== null && v.priceCurrency ? convertirAUsd(v.priceValue, v.priceCurrency, tasas) : null,
     is_subscription: v.isSubscription,
+    recurrency_number: v.recurrencyNumber,
     tracking: v.tracking,
     payload: v.payload,
   }));

@@ -39,11 +39,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
 
   const totalInversion = resumen.reduce((acc, d) => acc + d.inversion, 0);
   const totalFacturacion = resumen.reduce((acc, d) => acc + d.facturacionTotal, 0);
+  const totalFacturacionNueva = resumen.reduce((acc, d) => acc + d.facturacionNuevaTotal, 0);
   const totalConversiones = resumen.reduce(
     (acc, d) => acc + CATEGORIAS.reduce((a, c) => a + d.porCategoria[c].conteo, 0),
     0
   );
   const roasTotal = totalInversion > 0 ? totalFacturacion / totalInversion : null;
+  const roasNuevoTotal = totalInversion > 0 ? totalFacturacionNueva / totalInversion : null;
   const ticketMedioTotal = totalConversiones > 0 ? totalFacturacion / totalConversiones : null;
   const totalFrontEnd = resumen.reduce((acc, d) => acc + d.porCategoria.front_end.conteo, 0);
 
@@ -79,8 +81,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
           ))}
         </div>
       </div>
-      <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 0, marginBottom: 24 }}>
+      <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 0, marginBottom: 4 }}>
         {desde} a {hastaStr} (día vencido)
+      </p>
+      <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 0, marginBottom: 24, maxWidth: 640 }}>
+        &quot;Solo ventas nuevas&quot; excluye renovaciones de suscripción (Acompañamiento) — ese dinero no lo generó el
+        gasto publicitario del día, sino una compra de un mes anterior. Úsalo para juzgar si los anuncios se están pagando solos.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 32 }}>
@@ -93,7 +99,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
           <div style={valueStyle}>{formatoUsd(totalFacturacion)}</div>
         </div>
         <div style={cardStyle}>
-          <div style={labelStyle}>ROAS</div>
+          <div style={labelStyle}>ROAS (solo ventas nuevas)</div>
+          <div style={valueStyle}>{roasNuevoTotal !== null ? roasNuevoTotal.toFixed(2) : "—"}</div>
+        </div>
+        <div style={cardStyle}>
+          <div style={labelStyle}>ROAS total (incl. renovaciones)</div>
           <div style={valueStyle}>{roasTotal !== null ? roasTotal.toFixed(2) : "—"}</div>
         </div>
         <div style={cardStyle}>
@@ -127,9 +137,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                 "Pagos iniciados",
                 "Costo/Pago iniciado",
                 ...CATEGORIAS_TABLA.map((c) => ETIQUETAS_CATEGORIA[c]),
-                "Facturación",
+                "Facturación nueva",
+                "ROAS (nuevo)",
+                "Facturación total",
                 "Ticket medio",
-                "ROAS",
+                "ROAS total",
               ].map(
                 (h) => (
                   <th key={h} style={{ textAlign: "right", padding: "8px 10px", color: "var(--text-secondary)", fontWeight: 500 }}>
@@ -158,7 +170,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                     {formatoNumero(dia.porCategoria[c].conteo)}
                   </td>
                 ))}
-                <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 500 }}>{formatoUsd(dia.facturacionTotal)}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 500 }}>{formatoUsd(dia.facturacionNuevaTotal)}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>{dia.roasNuevo !== null ? dia.roasNuevo.toFixed(2) : "—"}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.facturacionTotal)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.ticketMedio)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{dia.roas !== null ? dia.roas.toFixed(2) : "—"}</td>
               </tr>

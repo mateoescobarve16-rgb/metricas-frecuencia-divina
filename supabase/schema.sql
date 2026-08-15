@@ -13,6 +13,7 @@ create table if not exists public.hotmart_ventas (
   price_currency text,
   price_usd numeric,
   is_subscription boolean not null default false,
+  recurrency_number int not null default 1,
   tracking jsonb,
   sincronizado_en timestamptz not null default now(),
   payload jsonb not null
