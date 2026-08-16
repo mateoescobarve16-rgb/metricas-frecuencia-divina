@@ -260,12 +260,12 @@ export default async function Home({
               <th rowSpan={2} style={{ ...thGrupoStyle, position: "sticky", left: 0, zIndex: 2, textAlign: "left" }}>
                 Fecha
               </th>
-              <th colSpan={10} style={thGrupoStyle}>Meta Ads</th>
+              <th colSpan={11} style={thGrupoStyle}>Meta Ads</th>
               <th colSpan={7} style={{ ...thGrupoStyle, borderLeft: "1px solid var(--border-strong)" }}>Embudo</th>
-              <th colSpan={5} style={{ ...thGrupoStyle, borderLeft: "1px solid var(--border-strong)" }}>Resultado</th>
+              <th colSpan={6} style={{ ...thGrupoStyle, borderLeft: "1px solid var(--border-strong)" }}>Resultado</th>
             </tr>
             <tr style={{ borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)" }}>
-              {["Inversión", "Impresiones", "Clics", "CPC", "CTR", "CPM", "Visitas LP", "Costo/Visita", "Pagos iniciados", "Costo/Pago iniciado"].map((h, i) => (
+              {["Inversión", "Impresiones", "Clics", "CPC", "CTR", "CPM", "Visitas LP", "Costo/Visita", "Pagos iniciados", "Costo/Pago iniciado", "CPA"].map((h, i) => (
                 <th key={h} style={{ ...thColStyle, ...(esColumnaSecundaria(h) ? { color: "var(--text-muted)", fontWeight: 400 } : {}), ...(i === 0 ? {} : {}) }}>
                   {h}
                 </th>
@@ -275,7 +275,7 @@ export default async function Home({
                   {ETIQUETAS_CATEGORIA[c]}
                 </th>
               ))}
-              {["Facturación nueva", "ROAS (nuevo)", "Facturación total", "ARPU", "ROAS total"].map((h, i) => (
+              {["Facturación nueva", "ROAS (nuevo)", "Facturación total", "ARPU", "ROAS total", "Lucro"].map((h, i) => (
                 <th key={h} style={{ ...thColStyle, ...(i === 0 ? { borderLeft: "1px solid var(--border-strong)" } : {}) }}>
                   {h}
                 </th>
@@ -314,6 +314,7 @@ export default async function Home({
                   <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.costoPorVisita)}</td>
                   <td style={tdStyle(filaBg)}>{formatoNumero(dia.pagosIniciados)}</td>
                   <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.costoPorPagoIniciado)}</td>
+                  <td style={{ ...tdStyle(filaBg), fontWeight: 500 }}>{formatoUsdPreciso(dia.cpa)}</td>
                   {CATEGORIAS_EMBUDO.map((c, i) => {
                     const conteoDia = dia.porCategoria[c].conteo;
                     const frontEndDia = dia.porCategoria.front_end.conteo;
@@ -332,6 +333,16 @@ export default async function Home({
                   <td style={tdStyle(filaBg)}>{formatoUsd(dia.facturacionTotal)}</td>
                   <td style={tdStyle(filaBg)}>{formatoUsd(dia.arpu)}</td>
                   <td style={tdStyle(filaBg)}>{dia.roas !== null ? dia.roas.toFixed(2) : "—"}</td>
+                  <td
+                    style={{
+                      ...tdStyle(filaBg),
+                      fontWeight: 500,
+                      color: dia.lucro >= 0 ? "var(--positive-text)" : "var(--negative-text)",
+                      background: dia.lucro >= 0 ? "var(--positive-bg)" : "var(--negative-bg)",
+                    }}
+                  >
+                    {formatoUsd(dia.lucro)}
+                  </td>
                 </tr>
               );
             })}

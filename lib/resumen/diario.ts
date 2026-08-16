@@ -45,6 +45,7 @@ export type ResumenDia = {
   costoPorVisita: number | null;
   pagosIniciados: number;
   costoPorPagoIniciado: number | null;
+  cpa: number | null;
   porCategoria: Record<CategoriaFunnel, { conteo: number; conteoNuevo: number; facturacion: number; facturacionNueva: number }>;
   facturacionTotal: number;
   facturacionNuevaTotal: number;
@@ -53,6 +54,7 @@ export type ResumenDia = {
   arpu: number | null;
   roas: number | null;
   roasNuevo: number | null;
+  lucro: number;
   verificacion: {
     estado: "ok" | "sin_datos" | "discrepancia";
     itemsPropios: number;
@@ -161,6 +163,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
         costoPorVisita: null,
         pagosIniciados: 0,
         costoPorPagoIniciado: null,
+        cpa: null,
         porCategoria: categoriaVacia(),
         facturacionTotal: 0,
         facturacionNuevaTotal: 0,
@@ -169,6 +172,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
         arpu: null,
         roas: null,
         roasNuevo: null,
+        lucro: 0,
         verificacion: { estado: "sin_datos", itemsPropios: 0, itemsHotmart: null, factorCorreccion: null },
         verificacionMeta: { estado: "sin_datos", promedioAnterior: null },
       };
@@ -282,11 +286,13 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     dia.cpm = dia.impresiones > 0 ? (dia.inversion / dia.impresiones) * 1000 : null;
     dia.costoPorVisita = dia.landingPageViews > 0 ? dia.inversion / dia.landingPageViews : null;
     dia.costoPorPagoIniciado = dia.pagosIniciados > 0 ? dia.inversion / dia.pagosIniciados : null;
+    dia.cpa = dia.porCategoria.front_end.conteo > 0 ? dia.inversion / dia.porCategoria.front_end.conteo : null;
 
     dia.usuariosUnicos = compradoresPorFecha.get(dia.fecha)?.size ?? 0;
     dia.arpu = dia.usuariosUnicos > 0 ? dia.facturacionTotal / dia.usuariosUnicos : null;
     dia.roas = dia.inversion > 0 ? dia.facturacionTotal / dia.inversion : null;
     dia.roasNuevo = dia.inversion > 0 ? dia.facturacionNuevaTotal / dia.inversion : null;
+    dia.lucro = dia.facturacionTotal - dia.inversion;
   }
 
   return dias;
