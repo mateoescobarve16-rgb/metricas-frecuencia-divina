@@ -49,6 +49,12 @@ export type ResumenDia = {
   arpu: number | null;
   roas: number | null;
   roasNuevo: number | null;
+  verificacion: {
+    estado: "ok" | "sin_datos" | "discrepancia";
+    itemsPropios: number;
+    itemsHotmart: number | null;
+    factorCorreccion: number | null;
+  };
 };
 
 function categoriaVacia(): Record<CategoriaFunnel, { conteo: number; conteoNuevo: number; facturacion: number; facturacionNueva: number }> {
@@ -107,14 +113,16 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     obtenerTodasLasFilas((desdeI, hastaI) =>
       supabase
         .from("hotmart_resumen_diario")
-        .select("fecha, facturacion_usd")
+        .select("fecha, facturacion_usd, total_items")
         .gte("fecha", desde)
         .lte("fecha", hasta)
         .range(desdeI, hastaI)
     ),
   ]);
 
-  const facturacionAutoritativaPorFecha = new Map(resumenHotmart.map((r) => [r.fecha, Number(r.facturacion_usd)]));
+  const resumenHotmartPorFecha = new Map(
+    resumenHotmart.map((r) => [r.fecha, { facturacionUsd: Number(r.facturacion_usd), totalItems: Number(r.total_items) }])
+  );
 
   const porFecha = new Map<string, ResumenDia>();
   const compradoresPorFecha = new Map<string, Set<string>>();
@@ -142,6 +150,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
         arpu: null,
         roas: null,
         roasNuevo: null,
+        verificacion: { estado: "sin_datos", itemsPropios: 0, itemsHotmart: null, factorCorreccion: null },
       };
       porFecha.set(fecha, dia);
     }
@@ -189,22 +198,41 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
   const dias = [...porFecha.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   for (const dia of dias) {
+    const itemsPropios = CATEGORIAS.reduce((acc, c) => acc + dia.porCategoria[c].conteo, 0);
+    const resumenOficial = resumenHotmartPorFecha.get(dia.fecha);
+
     // Hotmart convierte cada venta a USD con su propia tasa interna (la que muestra su
     // panel/"Faturamento"). Nuestra conversion via una API de tasas externa es solo una
     // aproximacion -- puede diferir bastante en monedas volatiles como ARS. Reescalamos
     // nuestro total (y el desglose por categoria, proporcionalmente) para que coincida
     // exacto con el numero oficial de Hotmart, sin perder el desglose por etapa del funnel.
-    const facturacionAutoritativa = facturacionAutoritativaPorFecha.get(dia.fecha);
-    if (facturacionAutoritativa !== undefined && dia.facturacionTotal > 0) {
-      const factor = facturacionAutoritativa / dia.facturacionTotal;
+    let factorCorreccion: number | null = null;
+    if (resumenOficial !== undefined && dia.facturacionTotal > 0) {
+      factorCorreccion = resumenOficial.facturacionUsd / dia.facturacionTotal;
       for (const c of CATEGORIAS) {
-        dia.porCategoria[c].facturacion *= factor;
-        dia.porCategoria[c].facturacionNueva *= factor;
+        dia.porCategoria[c].facturacion *= factorCorreccion;
+        dia.porCategoria[c].facturacionNueva *= factorCorreccion;
       }
-      dia.facturacionNuevaTotal *= factor;
-      dia.facturacionRenovacionesTotal *= factor;
-      dia.facturacionTotal = facturacionAutoritativa;
+      dia.facturacionNuevaTotal *= factorCorreccion;
+      dia.facturacionRenovacionesTotal *= factorCorreccion;
+      dia.facturacionTotal = resumenOficial.facturacionUsd;
     }
+
+    // Verificacion automatica contra los numeros oficiales de Hotmart -- el mismo metodo
+    // que usamos para encontrar y corregir los bugs de zona horaria/conversion de moneda,
+    // pero corriendo solo en cada sincronizacion en vez de a mano.
+    let estado: "ok" | "sin_datos" | "discrepancia" = "sin_datos";
+    if (resumenOficial !== undefined) {
+      const itemsCoinciden = itemsPropios === resumenOficial.totalItems;
+      const factorRazonable = factorCorreccion === null || (factorCorreccion >= 0.7 && factorCorreccion <= 1.3);
+      estado = itemsCoinciden && factorRazonable ? "ok" : "discrepancia";
+    }
+    dia.verificacion = {
+      estado,
+      itemsPropios,
+      itemsHotmart: resumenOficial?.totalItems ?? null,
+      factorCorreccion,
+    };
 
     dia.cpc = dia.clics > 0 ? dia.inversion / dia.clics : null;
     dia.ctr = dia.impresiones > 0 ? (dia.clics / dia.impresiones) * 100 : null;

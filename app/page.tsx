@@ -47,6 +47,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const arpuTotal = totalUsuariosUnicos > 0 ? totalFacturacion / totalUsuariosUnicos : null;
   const totalFrontEnd = resumen.reduce((acc, d) => acc + d.porCategoria.front_end.conteo, 0);
 
+  const diasConDiscrepancia = resumen.filter((d) => d.verificacion.estado === "discrepancia");
+  const diasVerificados = resumen.filter((d) => d.verificacion.estado === "ok");
+  const diasSinDatos = resumen.filter((d) => d.verificacion.estado === "sin_datos");
+
   const cardStyle: React.CSSProperties = {
     background: "var(--surface-1)",
     borderRadius: "var(--radius)",
@@ -82,12 +86,45 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
       <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 0, marginBottom: 4 }}>
         {desde} a {hastaStr} (día vencido)
       </p>
-      <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 0, marginBottom: 24, maxWidth: 640 }}>
+      <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 0, marginBottom: 12, maxWidth: 640 }}>
         Los conteos por etapa incluyen renovaciones de suscripción (Acompañamiento) — igual que el reporte de
         Hotmart, cada cobro exitoso cuenta como una venta. Solo la facturación/ROAS &quot;nuevo&quot; excluye esas
         renovaciones, para juzgar si el gasto publicitario del día se pagó solo (una renovación no la generó el
         anuncio de hoy).
       </p>
+
+      {diasConDiscrepancia.length > 0 ? (
+        <div
+          style={{
+            background: "var(--danger-bg)",
+            color: "var(--danger-text)",
+            border: "0.5px solid var(--danger)",
+            borderRadius: "var(--radius)",
+            padding: "10px 14px",
+            fontSize: 13,
+            marginBottom: 24,
+          }}
+        >
+          ⚠ {diasConDiscrepancia.length} día(s) no coinciden con los números oficiales de Hotmart, revisar:{" "}
+          {diasConDiscrepancia.map((d) => d.fecha).join(", ")}
+        </div>
+      ) : (
+        <div
+          style={{
+            background: "var(--success-bg)",
+            color: "var(--success-text)",
+            border: "0.5px solid var(--success)",
+            borderRadius: "var(--radius)",
+            padding: "10px 14px",
+            fontSize: 13,
+            marginBottom: 24,
+          }}
+        >
+          ✓ Verificado automáticamente contra Hotmart — {diasVerificados.length} de {resumen.length} días coinciden
+          exacto (ventas y facturación).
+          {diasSinDatos.length > 0 ? ` ${diasSinDatos.length} día(s) sin dato oficial todavía para comparar.` : ""}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 32 }}>
         <div style={cardStyle}>
