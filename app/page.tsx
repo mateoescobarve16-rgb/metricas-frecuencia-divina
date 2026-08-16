@@ -41,13 +41,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const totalInversion = resumen.reduce((acc, d) => acc + d.inversion, 0);
   const totalFacturacion = resumen.reduce((acc, d) => acc + d.facturacionTotal, 0);
   const totalFacturacionNueva = resumen.reduce((acc, d) => acc + d.facturacionNuevaTotal, 0);
-  const totalConversiones = resumen.reduce(
-    (acc, d) => acc + CATEGORIAS.reduce((a, c) => a + d.porCategoria[c].conteo, 0),
-    0
-  );
   const roasTotal = totalInversion > 0 ? totalFacturacion / totalInversion : null;
   const roasNuevoTotal = totalInversion > 0 ? totalFacturacionNueva / totalInversion : null;
-  const ticketMedioTotal = totalConversiones > 0 ? totalFacturacion / totalConversiones : null;
+  const totalUsuariosUnicos = resumen.reduce((acc, d) => acc + d.usuariosUnicos, 0);
+  const arpuTotal = totalUsuariosUnicos > 0 ? totalFacturacion / totalUsuariosUnicos : null;
   const totalFrontEnd = resumen.reduce((acc, d) => acc + d.porCategoria.front_end.conteo, 0);
 
   const cardStyle: React.CSSProperties = {
@@ -110,8 +107,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
           <div style={valueStyle}>{roasTotal !== null ? roasTotal.toFixed(2) : "—"}</div>
         </div>
         <div style={cardStyle}>
-          <div style={labelStyle}>Ticket medio</div>
-          <div style={valueStyle}>{formatoUsd(ticketMedioTotal)}</div>
+          <div style={labelStyle}>ARPU</div>
+          <div style={valueStyle}>{formatoUsd(arpuTotal)}</div>
         </div>
         <div style={cardStyle}>
           <div style={labelStyle}>Front-end (ventas)</div>
@@ -143,7 +140,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                 "Facturación nueva",
                 "ROAS (nuevo)",
                 "Facturación total",
-                "Ticket medio",
+                "ARPU",
                 "ROAS total",
               ].map(
                 (h) => (
@@ -176,7 +173,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                 <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 500 }}>{formatoUsd(dia.facturacionNuevaTotal)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{dia.roasNuevo !== null ? dia.roasNuevo.toFixed(2) : "—"}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.facturacionTotal)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.ticketMedio)}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.arpu)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{dia.roas !== null ? dia.roas.toFixed(2) : "—"}</td>
               </tr>
             ))}

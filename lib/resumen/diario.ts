@@ -45,7 +45,8 @@ export type ResumenDia = {
   facturacionTotal: number;
   facturacionNuevaTotal: number;
   facturacionRenovacionesTotal: number;
-  ticketMedio: number | null;
+  usuariosUnicos: number;
+  arpu: number | null;
   roas: number | null;
   roasNuevo: number | null;
 };
@@ -90,7 +91,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     obtenerTodasLasFilas((desdeI, hastaI) =>
       supabase
         .from("hotmart_ventas")
-        .select("product_id, offer_code, status, price_usd, fecha_venta, recurrency_number")
+        .select("product_id, offer_code, status, price_usd, fecha_venta, recurrency_number, buyer_ucode")
         .gte("fecha_venta", inicioUTC)
         .lt("fecha_venta", finUTC)
         .range(desdeI, hastaI)
@@ -116,6 +117,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
   const facturacionAutoritativaPorFecha = new Map(resumenHotmart.map((r) => [r.fecha, Number(r.facturacion_usd)]));
 
   const porFecha = new Map<string, ResumenDia>();
+  const compradoresPorFecha = new Map<string, Set<string>>();
 
   function obtenerDia(fecha: string): ResumenDia {
     let dia = porFecha.get(fecha);
@@ -136,7 +138,8 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
         facturacionTotal: 0,
         facturacionNuevaTotal: 0,
         facturacionRenovacionesTotal: 0,
-        ticketMedio: null,
+        usuariosUnicos: 0,
+        arpu: null,
         roas: null,
         roasNuevo: null,
       };
@@ -161,6 +164,12 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     const dia = obtenerDia(fecha);
     const categoria = clasificarVenta(venta.product_id, venta.offer_code);
     const esRenovacion = (venta.recurrency_number ?? 1) > 1;
+
+    if (venta.buyer_ucode) {
+      if (!compradoresPorFecha.has(fecha)) compradoresPorFecha.set(fecha, new Set());
+      compradoresPorFecha.get(fecha)!.add(venta.buyer_ucode);
+    }
+
     dia.porCategoria[categoria].conteo += 1;
     if (!esRenovacion) {
       dia.porCategoria[categoria].conteoNuevo += 1;
@@ -203,8 +212,8 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     dia.costoPorVisita = dia.landingPageViews > 0 ? dia.inversion / dia.landingPageViews : null;
     dia.costoPorPagoIniciado = dia.pagosIniciados > 0 ? dia.inversion / dia.pagosIniciados : null;
 
-    const totalConversiones = CATEGORIAS.reduce((acc, c) => acc + dia.porCategoria[c].conteo, 0);
-    dia.ticketMedio = totalConversiones > 0 ? dia.facturacionTotal / totalConversiones : null;
+    dia.usuariosUnicos = compradoresPorFecha.get(dia.fecha)?.size ?? 0;
+    dia.arpu = dia.usuariosUnicos > 0 ? dia.facturacionTotal / dia.usuariosUnicos : null;
     dia.roas = dia.inversion > 0 ? dia.facturacionTotal / dia.inversion : null;
     dia.roasNuevo = dia.inversion > 0 ? dia.facturacionNuevaTotal / dia.inversion : null;
   }

@@ -9,6 +9,7 @@ export type VentaHotmart = {
   priceCurrency: string | null;
   isSubscription: boolean;
   recurrencyNumber: number;
+  buyerUcode: string | null;
   tracking: unknown;
   payload: unknown;
 };
@@ -44,6 +45,7 @@ function mapearItem(item: any): VentaHotmart {
     priceCurrency: item.purchase.price?.currency_code ?? null,
     isSubscription: Boolean(item.purchase.is_subscription),
     recurrencyNumber: Number(item.purchase.recurrency_number ?? 1),
+    buyerUcode: item.buyer?.ucode ?? null,
     tracking: item.purchase.tracking ?? null,
     payload: item,
   };
