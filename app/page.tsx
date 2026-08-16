@@ -1,5 +1,6 @@
 import { obtenerResumenDiario, CATEGORIAS } from "@/lib/resumen/diario";
 import { ETIQUETAS_CATEGORIA } from "@/lib/hotmart/mapeoProductos";
+import { inicioDiaLocalComoUTC, fechaLocalDesdeUTC } from "@/lib/tiempo/zonaHorariaHotmart";
 import GraficoDiario from "@/components/GraficoDiario";
 
 export const dynamic = "force-dynamic";
@@ -29,11 +30,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const params = await searchParams;
   const dias = Number(params.dias ?? "14");
 
-  const hoy = new Date();
-  const hasta = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate() - 1));
-  const desdeDate = new Date(hasta.getTime() - (dias - 1) * 24 * 60 * 60 * 1000);
-  const desde = desdeDate.toISOString().slice(0, 10);
-  const hastaStr = hasta.toISOString().slice(0, 10);
+  const hoyLocal = fechaLocalDesdeUTC(new Date().toISOString());
+  const hastaMs = inicioDiaLocalComoUTC(hoyLocal) - 24 * 60 * 60 * 1000; // ayer local
+  const desdeMs = hastaMs - (dias - 1) * 24 * 60 * 60 * 1000;
+  const desde = fechaLocalDesdeUTC(new Date(desdeMs).toISOString());
+  const hastaStr = fechaLocalDesdeUTC(new Date(hastaMs).toISOString());
 
   const resumen = await obtenerResumenDiario(desde, hastaStr);
 

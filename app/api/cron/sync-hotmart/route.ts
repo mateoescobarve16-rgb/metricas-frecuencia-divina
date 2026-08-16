@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { sincronizarVentas } from "@/lib/hotmart/sync";
+import { inicioDiaLocalComoUTC, fechaLocalDesdeUTC } from "@/lib/tiempo/zonaHorariaHotmart";
 
 export const dynamic = "force-dynamic";
+
+const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
@@ -10,23 +13,23 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
-  const desdeParam = url.searchParams.get("desde"); // YYYY-MM-DD, para respaldos puntuales
-  const hastaParam = url.searchParams.get("hasta"); // YYYY-MM-DD
+  const desdeParam = url.searchParams.get("desde"); // YYYY-MM-DD (dia local, UTC-5), para respaldos puntuales
+  const hastaParam = url.searchParams.get("hasta"); // YYYY-MM-DD (dia local, UTC-5)
 
   let inicioVentanaUTC: number;
   let inicioHoyUTC: number;
 
   if (desdeParam && hastaParam) {
-    inicioVentanaUTC = new Date(`${desdeParam}T00:00:00Z`).getTime();
-    inicioHoyUTC = new Date(`${hastaParam}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000;
+    inicioVentanaUTC = inicioDiaLocalComoUTC(desdeParam);
+    inicioHoyUTC = inicioDiaLocalComoUTC(hastaParam) + UN_DIA_MS;
   } else {
     // Por defecto sincroniza una ventana de los ultimos 4 dias (no solo "ayer"): si una
     // corrida falla un dia, la siguiente lo reintenta sola, sin quedar un hueco permanente.
     // ?dias=N permite pedir una ventana mas grande (respaldo desde "hoy" hacia atras).
     const dias = Number(url.searchParams.get("dias") ?? "4");
-    const ahora = new Date();
-    inicioHoyUTC = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate());
-    inicioVentanaUTC = inicioHoyUTC - dias * 24 * 60 * 60 * 1000;
+    const hoyLocal = fechaLocalDesdeUTC(new Date().toISOString());
+    inicioHoyUTC = inicioDiaLocalComoUTC(hoyLocal); // exclusivo: llega hasta el final de "ayer" local
+    inicioVentanaUTC = inicioHoyUTC - dias * UN_DIA_MS;
   }
 
   try {

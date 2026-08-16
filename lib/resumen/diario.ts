@@ -1,5 +1,6 @@
 import { crearClienteSupabaseAdmin } from "../supabase/admin";
 import { clasificarVenta, type CategoriaFunnel } from "../hotmart/mapeoProductos";
+import { inicioDiaLocalComoUTC, fechaLocalDesdeUTC } from "../tiempo/zonaHorariaHotmart";
 
 const ESTADOS_EXCLUIDOS = new Set([
   "REFUNDED",
@@ -82,13 +83,16 @@ async function obtenerTodasLasFilas<T>(
 export async function obtenerResumenDiario(desde: string, hasta: string): Promise<ResumenDia[]> {
   const supabase = crearClienteSupabaseAdmin();
 
+  const inicioUTC = new Date(inicioDiaLocalComoUTC(desde)).toISOString();
+  const finUTC = new Date(inicioDiaLocalComoUTC(hasta) + 24 * 60 * 60 * 1000).toISOString();
+
   const [ventas, metaFilas] = await Promise.all([
     obtenerTodasLasFilas((desdeI, hastaI) =>
       supabase
         .from("hotmart_ventas")
         .select("product_id, offer_code, status, price_usd, fecha_venta, recurrency_number")
-        .gte("fecha_venta", `${desde}T00:00:00Z`)
-        .lt("fecha_venta", `${hasta}T23:59:59.999Z`)
+        .gte("fecha_venta", inicioUTC)
+        .lt("fecha_venta", finUTC)
         .range(desdeI, hastaI)
     ),
     obtenerTodasLasFilas((desdeI, hastaI) =>
@@ -143,7 +147,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
   for (const venta of ventas ?? []) {
     if (ESTADOS_EXCLUIDOS.has(venta.status)) continue;
 
-    const fecha = venta.fecha_venta.slice(0, 10);
+    const fecha = fechaLocalDesdeUTC(venta.fecha_venta);
     const dia = obtenerDia(fecha);
     const categoria = clasificarVenta(venta.product_id, venta.offer_code);
     const esRenovacion = (venta.recurrency_number ?? 1) > 1;
