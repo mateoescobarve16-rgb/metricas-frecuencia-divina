@@ -42,15 +42,31 @@ function tendencia(actual: number, anterior: number): { texto: string; color: st
 
 const CATEGORIAS_EMBUDO = CATEGORIAS.filter((c) => c !== "miembros" && c !== "sin_clasificar");
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ dias?: string }> }) {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ dias?: string; desde?: string; hasta?: string }>;
+}) {
   const params = await searchParams;
-  const dias = Number(params.dias ?? "14");
 
-  const hoyLocal = fechaLocalDesdeUTC(new Date().toISOString());
-  const hastaMs = inicioDiaLocalComoUTC(hoyLocal) - 24 * 60 * 60 * 1000; // ayer local
-  const desdeMs = hastaMs - (dias - 1) * 24 * 60 * 60 * 1000;
-  const desde = fechaLocalDesdeUTC(new Date(desdeMs).toISOString());
-  const hastaStr = fechaLocalDesdeUTC(new Date(hastaMs).toISOString());
+  let desde: string;
+  let hastaStr: string;
+  let dias: number;
+  let rangoPersonalizado = false;
+
+  if (params.desde && params.hasta) {
+    desde = params.desde;
+    hastaStr = params.hasta;
+    dias = Math.round((inicioDiaLocalComoUTC(hastaStr) - inicioDiaLocalComoUTC(desde)) / (24 * 60 * 60 * 1000)) + 1;
+    rangoPersonalizado = true;
+  } else {
+    dias = Number(params.dias ?? "14");
+    const hoyLocal = fechaLocalDesdeUTC(new Date().toISOString());
+    const hastaMs = inicioDiaLocalComoUTC(hoyLocal) - 24 * 60 * 60 * 1000; // ayer local
+    const desdeMs = hastaMs - (dias - 1) * 24 * 60 * 60 * 1000;
+    desde = fechaLocalDesdeUTC(new Date(desdeMs).toISOString());
+    hastaStr = fechaLocalDesdeUTC(new Date(hastaMs).toISOString());
+  }
 
   const desdeAnterior = restarDias(desde, dias);
   const hastaAnterior = restarDias(desde, 1);
@@ -112,7 +128,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
     <main style={{ maxWidth: 1180, margin: "0 auto", padding: "2rem 1.5rem 4rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, fontWeight: 500, margin: 0 }}>Métricas Frecuencia Divina</h1>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {[7, 14, 30, 90].map((n) => (
             <a
               key={n}
@@ -121,15 +137,56 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                 fontSize: 13,
                 padding: "5px 12px",
                 borderRadius: "var(--radius)",
-                border: `0.5px solid ${n === dias ? "var(--accent)" : "var(--border-strong)"}`,
-                color: n === dias ? "var(--accent-text)" : "var(--text-secondary)",
-                background: n === dias ? "var(--accent-bg)" : "var(--surface-1)",
+                border: `0.5px solid ${!rangoPersonalizado && n === dias ? "var(--accent)" : "var(--border-strong)"}`,
+                color: !rangoPersonalizado && n === dias ? "var(--accent-text)" : "var(--text-secondary)",
+                background: !rangoPersonalizado && n === dias ? "var(--accent-bg)" : "var(--surface-1)",
                 textDecoration: "none",
               }}
             >
               {n}d
             </a>
           ))}
+          <form
+            action="/"
+            method="get"
+            style={{
+              display: "flex",
+              gap: 6,
+              alignItems: "center",
+              padding: "3px 8px",
+              borderRadius: "var(--radius)",
+              border: `0.5px solid ${rangoPersonalizado ? "var(--accent)" : "var(--border-strong)"}`,
+              background: rangoPersonalizado ? "var(--accent-bg)" : "var(--surface-1)",
+            }}
+          >
+            <input
+              type="date"
+              name="desde"
+              defaultValue={desde}
+              style={{ fontSize: 12, background: "transparent", border: "none", color: "var(--text-primary)", colorScheme: "dark" }}
+            />
+            <span style={{ color: "var(--text-muted)", fontSize: 12 }}>a</span>
+            <input
+              type="date"
+              name="hasta"
+              defaultValue={hastaStr}
+              style={{ fontSize: 12, background: "transparent", border: "none", color: "var(--text-primary)", colorScheme: "dark" }}
+            />
+            <button
+              type="submit"
+              style={{
+                fontSize: 12,
+                padding: "3px 10px",
+                borderRadius: 6,
+                border: "0.5px solid var(--border-strong)",
+                background: "var(--surface-2)",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+              }}
+            >
+              Ver
+            </button>
+          </form>
         </div>
       </div>
       <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 0, marginBottom: 4 }}>
@@ -239,11 +296,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.costoPorVisita)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoNumero(dia.pagosIniciados)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.costoPorPagoIniciado)}</td>
-                {CATEGORIAS_EMBUDO.map((c) => (
-                  <td key={c} style={{ padding: "8px 10px", textAlign: "right" }}>
-                    {formatoNumero(dia.porCategoria[c].conteo)}
-                  </td>
-                ))}
+                {CATEGORIAS_EMBUDO.map((c) => {
+                  const conteoDia = dia.porCategoria[c].conteo;
+                  const frontEndDia = dia.porCategoria.front_end.conteo;
+                  const convPctDia = c !== "front_end" && frontEndDia > 0 ? (conteoDia / frontEndDia) * 100 : null;
+                  return (
+                    <td key={c} style={{ padding: "8px 10px", textAlign: "right" }}>
+                      {formatoNumero(conteoDia)}
+                      {convPctDia !== null ? (
+                        <span style={{ color: "var(--text-muted)", fontSize: 11 }}> ({convPctDia.toFixed(1)}%)</span>
+                      ) : null}
+                    </td>
+                  );
+                })}
                 <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 500 }}>{formatoUsd(dia.facturacionNuevaTotal)}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{dia.roasNuevo !== null ? dia.roasNuevo.toFixed(2) : "—"}</td>
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.facturacionTotal)}</td>
