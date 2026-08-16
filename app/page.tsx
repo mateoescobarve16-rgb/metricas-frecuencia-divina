@@ -254,71 +254,120 @@ export default async function Home({
       </div>
 
       <div style={{ overflowX: "auto", border: "0.5px solid var(--border)", borderRadius: "var(--radius)" }}>
-        <table style={{ width: "100%", fontSize: 13, whiteSpace: "nowrap" }}>
+        <table style={{ width: "100%", fontSize: 13, whiteSpace: "nowrap", borderCollapse: "separate", borderSpacing: 0 }}>
           <thead>
+            <tr>
+              <th rowSpan={2} style={{ ...thGrupoStyle, position: "sticky", left: 0, zIndex: 2, textAlign: "left" }}>
+                Fecha
+              </th>
+              <th colSpan={10} style={thGrupoStyle}>Meta Ads</th>
+              <th colSpan={7} style={{ ...thGrupoStyle, borderLeft: "1px solid var(--border-strong)" }}>Embudo</th>
+              <th colSpan={5} style={{ ...thGrupoStyle, borderLeft: "1px solid var(--border-strong)" }}>Resultado</th>
+            </tr>
             <tr style={{ borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)" }}>
-              {[
-                "Fecha",
-                "Inversión",
-                "Impresiones",
-                "Clics",
-                "CPC",
-                "CTR",
-                "CPM",
-                "Visitas LP",
-                "Costo/Visita",
-                "Pagos iniciados",
-                "Costo/Pago iniciado",
-                ...CATEGORIAS_EMBUDO.map((c) => ETIQUETAS_CATEGORIA[c]),
-                "Facturación nueva",
-                "ROAS (nuevo)",
-                "Facturación total",
-                "ARPU",
-                "ROAS total",
-              ].map((h) => (
-                <th key={h} style={{ textAlign: "right", padding: "8px 10px", color: "var(--text-secondary)", fontWeight: 500 }}>
+              {["Inversión", "Impresiones", "Clics", "CPC", "CTR", "CPM", "Visitas LP", "Costo/Visita", "Pagos iniciados", "Costo/Pago iniciado"].map((h, i) => (
+                <th key={h} style={{ ...thColStyle, ...(esColumnaSecundaria(h) ? { color: "var(--text-muted)", fontWeight: 400 } : {}), ...(i === 0 ? {} : {}) }}>
+                  {h}
+                </th>
+              ))}
+              {CATEGORIAS_EMBUDO.map((c, i) => (
+                <th key={c} style={{ ...thColStyle, ...(i === 0 ? { borderLeft: "1px solid var(--border-strong)" } : {}) }}>
+                  {ETIQUETAS_CATEGORIA[c]}
+                </th>
+              ))}
+              {["Facturación nueva", "ROAS (nuevo)", "Facturación total", "ARPU", "ROAS total"].map((h, i) => (
+                <th key={h} style={{ ...thColStyle, ...(i === 0 ? { borderLeft: "1px solid var(--border-strong)" } : {}) }}>
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {[...resumen].reverse().map((dia) => (
-              <tr key={dia.fecha} style={{ borderBottom: "0.5px solid var(--border)" }}>
-                <td style={{ padding: "8px 10px", textAlign: "left", color: "var(--text-primary)" }}>{dia.fecha}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.inversion)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoNumero(dia.impresiones)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoNumero(dia.clics)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.cpc)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoPct(dia.ctr)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.cpm)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoNumero(dia.landingPageViews)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.costoPorVisita)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoNumero(dia.pagosIniciados)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.costoPorPagoIniciado)}</td>
-                {CATEGORIAS_EMBUDO.map((c) => {
-                  const conteoDia = dia.porCategoria[c].conteo;
-                  const frontEndDia = dia.porCategoria.front_end.conteo;
-                  const convPctDia = c !== "front_end" && frontEndDia > 0 ? (conteoDia / frontEndDia) * 100 : null;
-                  return (
-                    <td key={c} style={{ padding: "8px 10px", textAlign: "right" }}>
-                      {formatoNumero(conteoDia)}
-                      {convPctDia !== null ? (
-                        <span style={{ color: "var(--text-muted)", fontSize: 11 }}> ({convPctDia.toFixed(1)}%)</span>
-                      ) : null}
-                    </td>
-                  );
-                })}
-                <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 500 }}>{formatoUsd(dia.facturacionNuevaTotal)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{dia.roasNuevo !== null ? dia.roasNuevo.toFixed(2) : "—"}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.facturacionTotal)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsd(dia.arpu)}</td>
-                <td style={{ padding: "8px 10px", textAlign: "right" }}>{dia.roas !== null ? dia.roas.toFixed(2) : "—"}</td>
-              </tr>
-            ))}
+            {[...resumen].reverse().map((dia, idx) => {
+              const filaBg = idx % 2 === 0 ? "var(--surface-1)" : "transparent";
+              const tieneAlerta = dia.verificacion.estado === "discrepancia" || dia.verificacionMeta.estado === "anomalia";
+              const roasColor = dia.roasNuevo === null ? "var(--text-primary)" : dia.roasNuevo >= 1 ? "var(--positive-text)" : "var(--negative-text)";
+              const roasBg = dia.roasNuevo === null ? "transparent" : dia.roasNuevo >= 1 ? "var(--positive-bg)" : "var(--negative-bg)";
+              return (
+                <tr key={dia.fecha} style={{ background: filaBg }}>
+                  <td
+                    style={{
+                      padding: "8px 10px",
+                      textAlign: "left",
+                      color: "var(--text-primary)",
+                      position: "sticky",
+                      left: 0,
+                      background: filaBg === "transparent" ? "var(--bg)" : filaBg,
+                      borderLeft: tieneAlerta ? "3px solid var(--negative)" : "3px solid transparent",
+                      borderBottom: "0.5px solid var(--border)",
+                    }}
+                  >
+                    {dia.fecha}
+                  </td>
+                  <td style={tdStyle(filaBg)}>{formatoUsd(dia.inversion)}</td>
+                  <td style={tdStyle(filaBg)}>{formatoNumero(dia.impresiones)}</td>
+                  <td style={tdStyle(filaBg)}>{formatoNumero(dia.clics)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.cpc)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoPct(dia.ctr)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.cpm)}</td>
+                  <td style={tdStyle(filaBg)}>{formatoNumero(dia.landingPageViews)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.costoPorVisita)}</td>
+                  <td style={tdStyle(filaBg)}>{formatoNumero(dia.pagosIniciados)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.costoPorPagoIniciado)}</td>
+                  {CATEGORIAS_EMBUDO.map((c, i) => {
+                    const conteoDia = dia.porCategoria[c].conteo;
+                    const frontEndDia = dia.porCategoria.front_end.conteo;
+                    const convPctDia = c !== "front_end" && frontEndDia > 0 ? (conteoDia / frontEndDia) * 100 : null;
+                    return (
+                      <td key={c} style={{ ...tdStyle(filaBg), ...(i === 0 ? { borderLeft: "1px solid var(--border-strong)" } : {}) }}>
+                        {formatoNumero(conteoDia)}
+                        {convPctDia !== null ? <span style={{ color: "var(--text-muted)", fontSize: 11 }}> ({convPctDia.toFixed(1)}%)</span> : null}
+                      </td>
+                    );
+                  })}
+                  <td style={{ ...tdStyle(filaBg), fontWeight: 500, borderLeft: "1px solid var(--border-strong)" }}>{formatoUsd(dia.facturacionNuevaTotal)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: roasColor, background: roasBg === "transparent" ? filaBg : roasBg, fontWeight: 500 }}>
+                    {dia.roasNuevo !== null ? dia.roasNuevo.toFixed(2) : "—"}
+                  </td>
+                  <td style={tdStyle(filaBg)}>{formatoUsd(dia.facturacionTotal)}</td>
+                  <td style={tdStyle(filaBg)}>{formatoUsd(dia.arpu)}</td>
+                  <td style={tdStyle(filaBg)}>{dia.roas !== null ? dia.roas.toFixed(2) : "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+      <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 10 }}>
+        <span style={{ borderLeft: "3px solid var(--negative)", paddingLeft: 6 }}>Barra roja a la izquierda</span> = día con alguna alerta de verificación. Celda de ROAS (nuevo) en verde/rojo según si superó 1.0 (el gasto se pagó solo) o no.
+      </p>
     </main>
   );
+}
+
+function esColumnaSecundaria(nombre: string) {
+  return ["CPC", "CTR", "CPM", "Costo/Visita", "Costo/Pago iniciado"].includes(nombre);
+}
+
+const thGrupoStyle: React.CSSProperties = {
+  padding: "6px 10px",
+  fontSize: 11,
+  fontWeight: 500,
+  color: "var(--text-muted)",
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  background: "var(--surface-2)",
+  borderBottom: "0.5px solid var(--border)",
+  textAlign: "center",
+};
+
+const thColStyle: React.CSSProperties = {
+  textAlign: "right",
+  padding: "8px 10px",
+  color: "var(--text-secondary)",
+  fontWeight: 500,
+};
+
+function tdStyle(filaBg: string): React.CSSProperties {
+  return { padding: "8px 10px", textAlign: "right", borderBottom: "0.5px solid var(--border)" };
 }
