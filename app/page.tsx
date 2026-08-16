@@ -47,7 +47,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const roasTotal = totalInversion > 0 ? totalFacturacion / totalInversion : null;
   const roasNuevoTotal = totalInversion > 0 ? totalFacturacionNueva / totalInversion : null;
   const ticketMedioTotal = totalConversiones > 0 ? totalFacturacion / totalConversiones : null;
-  const totalFrontEnd = resumen.reduce((acc, d) => acc + d.porCategoria.front_end.conteo, 0);
+  const totalFrontEnd = resumen.reduce((acc, d) => acc + d.porCategoria.front_end.conteoNuevo, 0);
 
   const cardStyle: React.CSSProperties = {
     background: "var(--surface-1)",
@@ -85,8 +85,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
         {desde} a {hastaStr} (día vencido)
       </p>
       <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 0, marginBottom: 24, maxWidth: 640 }}>
-        &quot;Solo ventas nuevas&quot; excluye renovaciones de suscripción (Acompañamiento) — ese dinero no lo generó el
-        gasto publicitario del día, sino una compra de un mes anterior. Úsalo para juzgar si los anuncios se están pagando solos.
+        Los conteos y la facturación excluyen renovaciones de suscripción (Acompañamiento) por defecto — esas ventas
+        y ese dinero no los generó el gasto publicitario del día, sino una compra de un mes anterior. Las columnas
+        &quot;total&quot; sí las incluyen, para ver el ingreso real de caja.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 32 }}>
@@ -117,7 +118,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
       </div>
 
       <div style={{ marginBottom: 32 }}>
-        <GraficoDiario datos={resumen.map((d) => ({ fecha: d.fecha, inversion: d.inversion, facturacion: d.facturacionTotal }))} />
+        <GraficoDiario datos={resumen.map((d) => ({ fecha: d.fecha, inversion: d.inversion, facturacion: d.facturacionNuevaTotal }))} />
       </div>
 
       <div style={{ overflowX: "auto", border: "0.5px solid var(--border)", borderRadius: "var(--radius)" }}>
@@ -167,7 +168,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                 <td style={{ padding: "8px 10px", textAlign: "right" }}>{formatoUsdPreciso(dia.costoPorPagoIniciado)}</td>
                 {CATEGORIAS_TABLA.map((c) => (
                   <td key={c} style={{ padding: "8px 10px", textAlign: "right" }}>
-                    {formatoNumero(dia.porCategoria[c].conteo)}
+                    {formatoNumero(dia.porCategoria[c].conteoNuevo)}
                   </td>
                 ))}
                 <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 500 }}>{formatoUsd(dia.facturacionNuevaTotal)}</td>

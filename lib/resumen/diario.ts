@@ -40,7 +40,7 @@ export type ResumenDia = {
   costoPorVisita: number | null;
   pagosIniciados: number;
   costoPorPagoIniciado: number | null;
-  porCategoria: Record<CategoriaFunnel, { conteo: number; facturacion: number; facturacionNueva: number }>;
+  porCategoria: Record<CategoriaFunnel, { conteo: number; conteoNuevo: number; facturacion: number; facturacionNueva: number }>;
   facturacionTotal: number;
   facturacionNuevaTotal: number;
   facturacionRenovacionesTotal: number;
@@ -49,9 +49,9 @@ export type ResumenDia = {
   roasNuevo: number | null;
 };
 
-function categoriaVacia(): Record<CategoriaFunnel, { conteo: number; facturacion: number; facturacionNueva: number }> {
-  const obj = {} as Record<CategoriaFunnel, { conteo: number; facturacion: number; facturacionNueva: number }>;
-  for (const c of CATEGORIAS) obj[c] = { conteo: 0, facturacion: 0, facturacionNueva: 0 };
+function categoriaVacia(): Record<CategoriaFunnel, { conteo: number; conteoNuevo: number; facturacion: number; facturacionNueva: number }> {
+  const obj = {} as Record<CategoriaFunnel, { conteo: number; conteoNuevo: number; facturacion: number; facturacionNueva: number }>;
+  for (const c of CATEGORIAS) obj[c] = { conteo: 0, conteoNuevo: 0, facturacion: 0, facturacionNueva: 0 };
   return obj;
 }
 
@@ -148,6 +148,9 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     const categoria = clasificarVenta(venta.product_id, venta.offer_code);
     const esRenovacion = (venta.recurrency_number ?? 1) > 1;
     dia.porCategoria[categoria].conteo += 1;
+    if (!esRenovacion) {
+      dia.porCategoria[categoria].conteoNuevo += 1;
+    }
     if (venta.price_usd !== null) {
       dia.porCategoria[categoria].facturacion += venta.price_usd;
       dia.facturacionTotal += venta.price_usd;
