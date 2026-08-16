@@ -59,7 +59,17 @@ export type ResumenDia = {
     itemsHotmart: number | null;
     factorCorreccion: number | null;
   };
+  verificacionMeta: {
+    estado: "ok" | "sin_datos" | "anomalia";
+    promedioAnterior: number | null;
+  };
 };
+
+function restarDias(fechaYYYYMMDD: string, dias: number): string {
+  const fecha = new Date(`${fechaYYYYMMDD}T00:00:00Z`);
+  fecha.setUTCDate(fecha.getUTCDate() - dias);
+  return fecha.toISOString().slice(0, 10);
+}
 
 function categoriaVacia(): Record<CategoriaFunnel, { conteo: number; conteoNuevo: number; facturacion: number; facturacionNueva: number }> {
   const obj = {} as Record<CategoriaFunnel, { conteo: number; conteoNuevo: number; facturacion: number; facturacionNueva: number }>;
@@ -97,6 +107,11 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
   const inicioUTC = new Date(inicioDiaLocalComoUTC(desde)).toISOString();
   const finUTC = new Date(inicioDiaLocalComoUTC(hasta) + 24 * 60 * 60 * 1000).toISOString();
 
+  // Traemos 7 dias extra antes de "desde" para poder calcular un promedio base y detectar
+  // caidas anomalas de inversion (posible token vencido, cuenta perdida, etc.), aunque el
+  // usuario este viendo una ventana corta que no incluye esos dias.
+  const desdeConMargen = restarDias(desde, 7);
+
   const [ventas, metaFilas, resumenHotmart] = await Promise.all([
     obtenerTodasLasFilas((desdeI, hastaI) =>
       supabase
@@ -110,7 +125,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
       supabase
         .from("meta_ads_diario")
         .select("fecha, spend, impressions, clicks, landing_page_views, pagos_iniciados")
-        .gte("fecha", desde)
+        .gte("fecha", desdeConMargen)
         .lte("fecha", hasta)
         .range(desdeI, hastaI)
     ),
@@ -155,13 +170,22 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
         roas: null,
         roasNuevo: null,
         verificacion: { estado: "sin_datos", itemsPropios: 0, itemsHotmart: null, factorCorreccion: null },
+        verificacionMeta: { estado: "sin_datos", promedioAnterior: null },
       };
       porFecha.set(fecha, dia);
     }
     return dia;
   }
 
+  // Inversion por fecha en TODA la ventana extendida (incluyendo los 7 dias de margen),
+  // para poder calcular el promedio base de los dias anteriores a cada fecha visible.
+  const inversionPorFecha = new Map<string, number>();
+
   for (const fila of metaFilas ?? []) {
+    inversionPorFecha.set(fila.fecha, (inversionPorFecha.get(fila.fecha) ?? 0) + Number(fila.spend ?? 0));
+
+    if (fila.fecha < desde) continue; // solo el margen, no crear un dia visible para esto
+
     const dia = obtenerDia(fila.fecha);
     dia.inversion += Number(fila.spend ?? 0);
     dia.impresiones += Number(fila.impressions ?? 0);
@@ -237,6 +261,21 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
       itemsHotmart: resumenOficial?.totalItems ?? null,
       factorCorreccion,
     };
+
+    // Meta no tiene un endpoint de "resumen oficial" como Hotmart para comparar exacto.
+    // En su lugar, detectamos caidas anomalas de inversion contra el promedio de los 7
+    // dias anteriores -- una senal tipica de que algo se rompio (token vencido, cuenta
+    // perdida) en vez de una baja real de actividad publicitaria.
+    const diasAnteriores: number[] = [];
+    for (let i = 1; i <= 7; i++) {
+      const valor = inversionPorFecha.get(restarDias(dia.fecha, i));
+      if (valor !== undefined) diasAnteriores.push(valor);
+    }
+    if (diasAnteriores.length >= 4) {
+      const promedioAnterior = diasAnteriores.reduce((a, b) => a + b, 0) / diasAnteriores.length;
+      const esAnomalia = promedioAnterior > 100 && dia.inversion < promedioAnterior * 0.15;
+      dia.verificacionMeta = { estado: esAnomalia ? "anomalia" : "ok", promedioAnterior };
+    }
 
     dia.cpc = dia.clics > 0 ? dia.inversion / dia.clics : null;
     dia.ctr = dia.impresiones > 0 ? (dia.clics / dia.impresiones) * 100 : null;

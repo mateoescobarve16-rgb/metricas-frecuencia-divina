@@ -51,6 +51,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const diasVerificados = resumen.filter((d) => d.verificacion.estado === "ok");
   const diasSinDatos = resumen.filter((d) => d.verificacion.estado === "sin_datos");
 
+  const diasConAnomaliaMeta = resumen.filter((d) => d.verificacionMeta.estado === "anomalia");
+
   const cardStyle: React.CSSProperties = {
     background: "var(--surface-1)",
     borderRadius: "var(--radius)",
@@ -123,6 +125,24 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
           ✓ Verificado automáticamente contra Hotmart — {diasVerificados.length} de {resumen.length} días coinciden
           exacto (ventas y facturación).
           {diasSinDatos.length > 0 ? ` ${diasSinDatos.length} día(s) sin dato oficial todavía para comparar.` : ""}
+        </div>
+      )}
+
+      {diasConAnomaliaMeta.length > 0 && (
+        <div
+          style={{
+            background: "var(--danger-bg)",
+            color: "var(--danger-text)",
+            border: "0.5px solid var(--danger)",
+            borderRadius: "var(--radius)",
+            padding: "10px 14px",
+            fontSize: 13,
+            marginBottom: 24,
+          }}
+        >
+          ⚠ Posible falla en la sincronización de Meta — la inversión cayó de golpe respecto al promedio de los 7
+          días anteriores en: {diasConAnomaliaMeta.map((d) => d.fecha).join(", ")}. Revisar si el token o el acceso
+          a alguna cuenta se rompió.
         </div>
       )}
 
