@@ -76,3 +76,28 @@ export async function listarVentasPorRango(startDate: number, endDate: number): 
 
   return ventas;
 }
+
+// El endpoint de "resumen" de Hotmart ya trae la facturacion convertida a USD usando la
+// tasa de cambio INTERNA de Hotmart (la misma que muestra su propio panel/"Faturamento").
+// Nuestra propia conversion via una API de tasas externa no coincide exacto con eso,
+// sobre todo en monedas volatiles como ARS -- por eso usamos este numero como la fuente
+// de verdad para la facturacion total, en vez de sumar nuestras conversiones.
+export async function obtenerResumenVentas(startDate: number, endDate: number): Promise<{ totalValueUsd: number; totalItems: number }> {
+  const accessToken = await obtenerAccessToken();
+
+  const url = new URL("https://developers.hotmart.com/payments/api/v1/sales/summary");
+  url.searchParams.set("start_date", String(startDate));
+  url.searchParams.set("end_date", String(endDate));
+
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) {
+    throw new Error(`Error consultando resumen de ventas de Hotmart: ${res.status} ${await res.text()}`);
+  }
+
+  const body = await res.json();
+  const item = body.items?.[0];
+  return {
+    totalValueUsd: item?.total_value?.value ?? 0,
+    totalItems: item?.total_items ?? 0,
+  };
+}

@@ -86,7 +86,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
   const inicioUTC = new Date(inicioDiaLocalComoUTC(desde)).toISOString();
   const finUTC = new Date(inicioDiaLocalComoUTC(hasta) + 24 * 60 * 60 * 1000).toISOString();
 
-  const [ventas, metaFilas] = await Promise.all([
+  const [ventas, metaFilas, resumenHotmart] = await Promise.all([
     obtenerTodasLasFilas((desdeI, hastaI) =>
       supabase
         .from("hotmart_ventas")
@@ -103,7 +103,17 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
         .lte("fecha", hasta)
         .range(desdeI, hastaI)
     ),
+    obtenerTodasLasFilas((desdeI, hastaI) =>
+      supabase
+        .from("hotmart_resumen_diario")
+        .select("fecha, facturacion_usd")
+        .gte("fecha", desde)
+        .lte("fecha", hasta)
+        .range(desdeI, hastaI)
+    ),
   ]);
+
+  const facturacionAutoritativaPorFecha = new Map(resumenHotmart.map((r) => [r.fecha, Number(r.facturacion_usd)]));
 
   const porFecha = new Map<string, ResumenDia>();
 
@@ -170,6 +180,23 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
   const dias = [...porFecha.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   for (const dia of dias) {
+    // Hotmart convierte cada venta a USD con su propia tasa interna (la que muestra su
+    // panel/"Faturamento"). Nuestra conversion via una API de tasas externa es solo una
+    // aproximacion -- puede diferir bastante en monedas volatiles como ARS. Reescalamos
+    // nuestro total (y el desglose por categoria, proporcionalmente) para que coincida
+    // exacto con el numero oficial de Hotmart, sin perder el desglose por etapa del funnel.
+    const facturacionAutoritativa = facturacionAutoritativaPorFecha.get(dia.fecha);
+    if (facturacionAutoritativa !== undefined && dia.facturacionTotal > 0) {
+      const factor = facturacionAutoritativa / dia.facturacionTotal;
+      for (const c of CATEGORIAS) {
+        dia.porCategoria[c].facturacion *= factor;
+        dia.porCategoria[c].facturacionNueva *= factor;
+      }
+      dia.facturacionNuevaTotal *= factor;
+      dia.facturacionRenovacionesTotal *= factor;
+      dia.facturacionTotal = facturacionAutoritativa;
+    }
+
     dia.cpc = dia.clics > 0 ? dia.inversion / dia.clics : null;
     dia.ctr = dia.impresiones > 0 ? (dia.clics / dia.impresiones) * 100 : null;
     dia.cpm = dia.impresiones > 0 ? (dia.inversion / dia.impresiones) * 1000 : null;

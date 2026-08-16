@@ -64,3 +64,17 @@ grant select, insert, update, delete on public.meta_ads_diario to service_role;
 -- Si en el futuro se remueve una cuenta publicitaria de la BM matriz (por bloqueo), el cron
 -- simplemente deja de traerle datos nuevos. Las filas ya guardadas aquí quedan intactas para
 -- consultarlas cuando se necesite -- nunca se borran automáticamente.
+
+-- Facturación diaria ya convertida a USD por el propio Hotmart (endpoint "resumen de ventas").
+-- Es la fuente de verdad para el total en dólares -- coincide exacto con el panel de Hotmart,
+-- a diferencia de convertir cada venta nosotros mismos con una tasa de cambio externa (que
+-- puede diferir bastante de la tasa interna de Hotmart, sobre todo en monedas volátiles).
+create table if not exists public.hotmart_resumen_diario (
+  fecha date primary key,
+  facturacion_usd numeric not null,
+  total_items int not null,
+  sincronizado_en timestamptz not null default now()
+);
+
+alter table public.hotmart_resumen_diario enable row level security;
+grant select, insert, update, delete on public.hotmart_resumen_diario to service_role;
