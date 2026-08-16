@@ -15,6 +15,10 @@ const ESTADOS_EXCLUIDOS = new Set([
   "PRINTED_BILLET",
   "WAITING_PAYMENT",
   "STARTED",
+  // Estado propio (no de Hotmart): marca transacciones que en algun momento dejaron de
+  // aparecer en la API de Hotmart sin que sepamos la razon exacta (rarisimo, ~1 en 8000
+  // revisadas). Se excluyen para que coincidan con el conteo oficial de Hotmart.
+  "SIN_RASTRO_EN_HOTMART",
 ]);
 
 export const CATEGORIAS: CategoriaFunnel[] = [
