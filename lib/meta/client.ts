@@ -72,20 +72,27 @@ function extraerAccion(actions: any[] | undefined, tipo: string): number {
 
 export async function obtenerInsightsDiarios(adAccountId: string, since: string, until: string): Promise<InsightDiario[]> {
   const body = await get(`/${adAccountId}/insights`, {
-    fields: "spend,impressions,clicks,cpc,ctr,cpm,actions",
+    // "clicks" incluye TODO (reacciones, comentarios, etc.) -- usamos inline_link_clicks,
+    // que es lo mismo que Ads Manager muestra como "Clics en el enlace" por defecto.
+    fields: "spend,impressions,inline_link_clicks,actions",
     time_range: JSON.stringify({ since, until }),
     time_increment: "1",
   });
 
-  return (body.data ?? []).map((d: any) => ({
-    fecha: d.date_start,
-    spend: Number(d.spend ?? 0),
-    impressions: Number(d.impressions ?? 0),
-    clicks: Number(d.clicks ?? 0),
-    cpc: Number(d.cpc ?? 0),
-    ctr: Number(d.ctr ?? 0),
-    cpm: Number(d.cpm ?? 0),
-    landingPageViews: extraerAccion(d.actions, "landing_page_view"),
-    pagosIniciados: extraerAccion(d.actions, "initiate_checkout"),
-  }));
+  return (body.data ?? []).map((d: any) => {
+    const spend = Number(d.spend ?? 0);
+    const impressions = Number(d.impressions ?? 0);
+    const clicks = Number(d.inline_link_clicks ?? 0);
+    return {
+      fecha: d.date_start,
+      spend,
+      impressions,
+      clicks,
+      cpc: clicks > 0 ? spend / clicks : 0,
+      ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+      cpm: impressions > 0 ? (spend / impressions) * 1000 : 0,
+      landingPageViews: extraerAccion(d.actions, "landing_page_view"),
+      pagosIniciados: extraerAccion(d.actions, "initiate_checkout"),
+    };
+  });
 }
