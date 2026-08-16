@@ -65,7 +65,7 @@ export type ResumenDia = {
   };
 };
 
-function restarDias(fechaYYYYMMDD: string, dias: number): string {
+export function restarDias(fechaYYYYMMDD: string, dias: number): string {
   const fecha = new Date(`${fechaYYYYMMDD}T00:00:00Z`);
   fecha.setUTCDate(fecha.getUTCDate() - dias);
   return fecha.toISOString().slice(0, 10);

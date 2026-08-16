@@ -1,44 +1,26 @@
 :root {
-  --surface-0: #f7f6f3;
-  --surface-1: #fcfcfb;
-  --surface-2: #ffffff;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --border: rgba(11, 11, 11, 0.1);
-  --border-strong: rgba(11, 11, 11, 0.18);
-  --accent: #2a78d6;
-  --accent-bg: #e6f1fb;
-  --accent-text: #0c447c;
-  --success: #0ca30c;
-  --success-bg: #eaf3de;
-  --success-text: #27500a;
-  --danger: #d03b3b;
-  --danger-bg: #fcebeb;
-  --danger-text: #791f1f;
-  --radius: 8px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface-0: #131312;
-    --surface-1: #1a1a19;
-    --surface-2: #201f1e;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --border: rgba(255, 255, 255, 0.1);
-    --border-strong: rgba(255, 255, 255, 0.18);
-    --accent: #3987e5;
-    --accent-bg: #0c447c;
-    --accent-text: #e6f1fb;
-    --success: #0ca30c;
-    --success-bg: #173404;
-    --success-text: #eaf3de;
-    --danger: #e66767;
-    --danger-bg: #501313;
-    --danger-text: #fcebeb;
-  }
+  --bg: #0a0a0e;
+  --surface-1: #15151b;
+  --surface-2: #1d1d25;
+  --surface-hover: #24242e;
+  --text-primary: #f5f5f7;
+  --text-secondary: #9d9da8;
+  --text-muted: #6c6c78;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --accent: #3b82f6;
+  --accent-bg: rgba(59, 130, 246, 0.12);
+  --accent-text: #60a5fa;
+  --positive: #22c55e;
+  --positive-bg: rgba(34, 197, 94, 0.12);
+  --positive-text: #4ade80;
+  --negative: #ef4444;
+  --negative-bg: rgba(239, 68, 68, 0.12);
+  --negative-text: #f87171;
+  --warning: #f59e0b;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-text: #fbbf24;
+  --radius: 10px;
 }
 
 * {
@@ -47,12 +29,17 @@
 
 body {
   margin: 0;
-  background: var(--surface-0);
+  background: var(--bg);
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;
 }
 
 table {
   border-collapse: collapse;
+}
+
+::selection {
+  background: var(--accent-bg);
 }

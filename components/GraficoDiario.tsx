@@ -20,8 +20,8 @@ export default function GraficoDiario({ datos }: { datos: Punto[] }) {
           {
             label: "Inversión",
             data: datos.map((d) => d.inversion),
-            borderColor: "#2a78d6",
-            backgroundColor: "#2a78d6",
+            borderColor: "#3b82f6",
+            backgroundColor: "#3b82f6",
             borderWidth: 2,
             pointRadius: 3,
             tension: 0.2,
@@ -29,8 +29,8 @@ export default function GraficoDiario({ datos }: { datos: Punto[] }) {
           {
             label: "Facturación",
             data: datos.map((d) => d.facturacion),
-            borderColor: "#1baf7a",
-            backgroundColor: "#1baf7a",
+            borderColor: "#22c55e",
+            backgroundColor: "#22c55e",
             borderWidth: 2,
             pointRadius: 3,
             tension: 0.2,
@@ -51,10 +51,11 @@ export default function GraficoDiario({ datos }: { datos: Punto[] }) {
         scales: {
           y: {
             beginAtZero: true,
-            ticks: { callback: (v) => `$${Number(v).toLocaleString("en-US")}` },
-            grid: { color: "rgba(128,128,128,0.15)" },
+            ticks: { callback: (v) => `$${Number(v).toLocaleString("en-US")}`, color: "#8a8a94" },
+            grid: { color: "rgba(255,255,255,0.08)" },
           },
           x: {
+            ticks: { color: "#8a8a94" },
             grid: { display: false },
           },
         },
@@ -69,11 +70,11 @@ export default function GraficoDiario({ datos }: { datos: Punto[] }) {
     <div>
       <div style={{ display: "flex", gap: 16, marginBottom: 8, fontSize: 12, color: "var(--text-secondary)" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: "#2a78d6", display: "inline-block" }} />
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: "#3b82f6", display: "inline-block" }} />
           Inversión
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: "#1baf7a", display: "inline-block" }} />
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: "#22c55e", display: "inline-block" }} />
           Facturación
         </span>
       </div>
