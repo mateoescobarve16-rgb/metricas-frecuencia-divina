@@ -84,8 +84,7 @@ export default async function Home({
   const totalUsuariosUnicos = sumar(resumen, (d) => d.usuariosUnicos);
   const arpuTotal = totalUsuariosUnicos > 0 ? totalFacturacion / totalUsuariosUnicos : null;
   const totalFrontEnd = sumar(resumen, (d) => d.porCategoria.front_end.conteo);
-  const totalPagosIniciados = sumar(resumen, (d) => d.pagosIniciados);
-  const costoPorPagoIniciadoTotal = totalPagosIniciados > 0 ? totalInversion / totalPagosIniciados : null;
+  const cpaTotal = totalFrontEnd > 0 ? totalInversion / totalFrontEnd : null;
 
   const invAnterior = sumar(resumenAnterior, (d) => d.inversion);
   const factAnterior = sumar(resumenAnterior, (d) => d.facturacionTotal);
@@ -94,8 +93,7 @@ export default async function Home({
   const usuariosAnterior = sumar(resumenAnterior, (d) => d.usuariosUnicos);
   const arpuAnterior = usuariosAnterior > 0 ? factAnterior / usuariosAnterior : 0;
   const frontEndAnterior = sumar(resumenAnterior, (d) => d.porCategoria.front_end.conteo);
-  const pagosAnterior = sumar(resumenAnterior, (d) => d.pagosIniciados);
-  const costoPorPagoAnterior = pagosAnterior > 0 ? invAnterior / pagosAnterior : 0;
+  const cpaAnterior = frontEndAnterior > 0 ? invAnterior / frontEndAnterior : 0;
 
   const diasConDiscrepancia = resumen.filter((d) => d.verificacion.estado === "discrepancia");
   const diasVerificados = resumen.filter((d) => d.verificacion.estado === "ok");
@@ -112,7 +110,7 @@ export default async function Home({
     { label: "ROAS (nuevo)", valor: roasNuevoTotal !== null ? roasNuevoTotal.toFixed(2) : "—", tend: tendencia(roasNuevoTotal ?? 0, roasNuevoAnterior) },
     { label: "ARPU", valor: formatoUsd(arpuTotal), tend: tendencia(arpuTotal ?? 0, arpuAnterior) },
     { label: "Front-end", valor: formatoNumero(totalFrontEnd), tend: tendencia(totalFrontEnd, frontEndAnterior) },
-    { label: "Costo/Pago iniciado", valor: formatoUsdPreciso(costoPorPagoIniciadoTotal), tend: tendencia(costoPorPagoAnterior, costoPorPagoIniciadoTotal ?? 0) },
+    { label: "CPA", valor: formatoUsdPreciso(cpaTotal), tend: tendencia(cpaAnterior, cpaTotal ?? 0) },
   ];
 
   const cardStyle: React.CSSProperties = {
