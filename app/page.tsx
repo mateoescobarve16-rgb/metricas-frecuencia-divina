@@ -61,6 +61,7 @@ export default async function Home({
   let hastaStr: string;
   let dias: number;
   let rangoPersonalizado = false;
+  const hoyLocal = fechaLocalDesdeUTC(new Date().toISOString());
 
   if (params.desde && params.hasta) {
     desde = params.desde;
@@ -69,8 +70,7 @@ export default async function Home({
     rangoPersonalizado = true;
   } else {
     dias = Number(params.dias ?? "14");
-    const hoyLocal = fechaLocalDesdeUTC(new Date().toISOString());
-    const hastaMs = inicioDiaLocalComoUTC(hoyLocal) - 24 * 60 * 60 * 1000; // ayer local
+    const hastaMs = inicioDiaLocalComoUTC(hoyLocal); // incluye hoy (con sync intradia, ya trae datos parciales)
     const desdeMs = hastaMs - (dias - 1) * 24 * 60 * 60 * 1000;
     desde = fechaLocalDesdeUTC(new Date(desdeMs).toISOString());
     hastaStr = fechaLocalDesdeUTC(new Date(hastaMs).toISOString());
@@ -78,6 +78,7 @@ export default async function Home({
 
   const desdeAnterior = restarDias(desde, dias);
   const hastaAnterior = restarDias(desde, 1);
+  const incluyeHoy = hastaStr === hoyLocal;
 
   const [resumen, resumenAnterior] = await Promise.all([
     obtenerResumenDiario(desde, hastaStr),
@@ -106,7 +107,11 @@ export default async function Home({
   const diasConDiscrepancia = resumen.filter((d) => d.verificacion.estado === "discrepancia");
   const diasVerificados = resumen.filter((d) => d.verificacion.estado === "ok");
   const diasSinDatos = resumen.filter((d) => d.verificacion.estado === "sin_datos");
+  const diasEnCurso = resumen.filter((d) => d.verificacion.estado === "en_curso");
   const diasConAnomaliaMeta = resumen.filter((d) => d.verificacionMeta.estado === "anomalia");
+  // El dia de hoy no cuenta para el "X de Y dias coinciden" -- todavia no tiene con que
+  // compararse, no es ni un acierto ni un fallo.
+  const diasCerrados = resumen.length - diasEnCurso.length;
 
   const conteoPorCategoria: Record<CategoriaFunnel, number> = Object.fromEntries(
     CATEGORIAS.map((c) => [c, sumar(resumen, (d) => d.porCategoria[c].conteo)])
@@ -203,7 +208,7 @@ export default async function Home({
         </div>
       </div>
       <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 0, marginBottom: 4 }}>
-        {desde} a {hastaStr} (día vencido) · vs. {desdeAnterior} a {hastaAnterior}
+        {desde} a {hastaStr} {incluyeHoy ? "(incluye hoy en curso)" : "(día vencido)"} · vs. {desdeAnterior} a {hastaAnterior}
       </p>
       <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 0, marginBottom: 20, maxWidth: 680 }}>
         Los conteos por etapa incluyen renovaciones de suscripción (Acompañamiento) — igual que Hotmart. Solo la
@@ -217,8 +222,9 @@ export default async function Home({
         </div>
       ) : (
         <div style={{ background: "var(--positive-bg)", color: "var(--positive-text)", border: "0.5px solid var(--positive)", borderRadius: "var(--radius)", padding: "10px 14px", fontSize: 13, marginBottom: 12 }}>
-          ✓ Verificado automáticamente contra Hotmart — {diasVerificados.length} de {resumen.length} días coinciden exacto.
+          ✓ Verificado automáticamente contra Hotmart — {diasVerificados.length} de {diasCerrados} días cerrados coinciden exacto.
           {diasSinDatos.length > 0 ? ` ${diasSinDatos.length} día(s) sin dato oficial todavía.` : ""}
+          {diasEnCurso.length > 0 ? ` Hoy sigue en curso, todavía no se verifica.` : ""}
         </div>
       )}
 
@@ -299,9 +305,13 @@ export default async function Home({
             {[...resumen].reverse().map((dia, idx) => {
               const filaBg = idx % 2 === 0 ? "var(--surface-1)" : "transparent";
               const tieneAlerta = dia.verificacion.estado === "discrepancia" || dia.verificacionMeta.estado === "anomalia";
+              const esHoy = dia.fecha === hoyLocal;
               const roasColor = dia.roasNuevo === null ? "var(--text-primary)" : dia.roasNuevo >= 1 ? "var(--positive-text)" : "var(--negative-text)";
               const roasBg = dia.roasNuevo === null ? "transparent" : dia.roasNuevo >= 1 ? "var(--positive-bg)" : "var(--negative-bg)";
-              const diaAnterior = mapaPorFecha.get(restarDias(dia.fecha, 1));
+              // Hoy esta a medio terminar: compararlo contra un dia de ayer completo daria una
+              // flecha enganosa (ej. ▼ solo porque todavia no lleva la mitad del gasto del dia),
+              // asi que no se le calcula tendencia dia-a-dia todavia.
+              const diaAnterior = esHoy ? undefined : mapaPorFecha.get(restarDias(dia.fecha, 1));
               const flechaInversion = flechaDia(dia.inversion, diaAnterior?.inversion);
               const flechaFacturacion = flechaDia(dia.facturacionTotal, diaAnterior?.facturacionTotal);
               const flechaRoas = flechaDia(dia.roasNuevo, diaAnterior?.roasNuevo);
@@ -327,6 +337,20 @@ export default async function Home({
                     }}
                   >
                     {dia.fecha}
+                    {esHoy ? (
+                      <span
+                        style={{
+                          marginLeft: 6,
+                          fontSize: 10,
+                          color: "var(--accent-text)",
+                          background: "var(--accent-bg)",
+                          borderRadius: 999,
+                          padding: "1px 6px",
+                        }}
+                      >
+                        en curso
+                      </span>
+                    ) : null}
                   </td>
                   <td style={tdStyle(filaBg)}>
                     {formatoUsd(dia.inversion)}
@@ -402,6 +426,7 @@ export default async function Home({
       <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 10 }}>
         <span style={{ borderLeft: "3px solid var(--negative)", paddingLeft: 6 }}>Barra roja a la izquierda</span> = día con alguna alerta de verificación. Celda de ROAS (nuevo) en verde/rojo según si superó 1.0 (el gasto se pagó solo) o no.
         Las flechitas (▲ ▼ ≈) comparan ese día contra el día calendario anterior. En Inversión, ROAS (nuevo), Facturación total, Lucro y CTR: ▲ verde = subió (bueno). En CPC, CPM, Costo/Visita, Costo/Pago iniciado y CPA (costos): ▲ verde = bajó (bueno) — más barato es mejor, por eso ahí la flecha va invertida.
+        La etiqueta &quot;en curso&quot; marca el día de hoy: se sincroniza varias veces mientras avanza (10am, 3pm y 8pm), así que sus números son parciales — por eso no tiene flecha de tendencia todavía ni entra en la verificación contra Hotmart hasta que el día cierre.
       </p>
     </main>
   );

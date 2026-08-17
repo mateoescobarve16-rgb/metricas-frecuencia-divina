@@ -1,0 +1,32 @@
+name: Sync intradía
+
+# Vercel Hobby solo permite cron 1x/día, así que estas corridas extra viven acá.
+# Horarios en hora Colombia/Perú (UTC-5, la misma zona que usa Hotmart): 10am, 3pm y 8pm.
+# GitHub Actions solo agenda en UTC, por eso son 15:00, 20:00 y 01:00 UTC.
+on:
+  schedule:
+    - cron: "0 15 * * *"
+    - cron: "0 20 * * *"
+    - cron: "0 1 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sincronizar Hotmart y Meta (incluye hoy)
+        run: |
+          # "hoy" en UTC-5 se calcula restando 5 horas a la hora UTC actual, no con la fecha
+          # UTC directa -- si no, la corrida de las 01:00 UTC (8pm local) calcularia mal el
+          # dia, porque en UTC ya seria manana.
+          HASTA=$(date -u -d '5 hours ago' +%Y-%m-%d)
+          DESDE=$(date -u -d '5 hours ago - 2 days' +%Y-%m-%d)
+          echo "Sincronizando $DESDE a $HASTA"
+
+          curl -sf -X GET "https://metricas-frecuencia-divina.vercel.app/api/cron/sync-hotmart?desde=$DESDE&hasta=$HASTA" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          echo ""
+
+          curl -sf -X GET "https://metricas-frecuencia-divina.vercel.app/api/cron/sync-meta?desde=$DESDE&hasta=$HASTA" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          echo ""

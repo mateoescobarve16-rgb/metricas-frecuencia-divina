@@ -56,13 +56,13 @@ export type ResumenDia = {
   roasNuevo: number | null;
   lucro: number;
   verificacion: {
-    estado: "ok" | "sin_datos" | "discrepancia";
+    estado: "ok" | "sin_datos" | "discrepancia" | "en_curso";
     itemsPropios: number;
     itemsHotmart: number | null;
     factorCorreccion: number | null;
   };
   verificacionMeta: {
-    estado: "ok" | "sin_datos" | "anomalia";
+    estado: "ok" | "sin_datos" | "anomalia" | "en_curso";
     promedioAnterior: number | null;
   };
 };
@@ -105,6 +105,13 @@ async function obtenerTodasLasFilas<T>(
 
 export async function obtenerResumenDiario(desde: string, hasta: string): Promise<ResumenDia[]> {
   const supabase = crearClienteSupabaseAdmin();
+
+  // Con el sync intradia, "hoy" puede sincronizarse varias veces mientras el dia todavia
+  // esta en curso. Ese dia nunca va a calzar con el resumen oficial de Hotmart (que tampoco
+  // ha cerrado) ni con el promedio de gasto de Meta (que compara dias completos) -- por eso
+  // se marca aparte como "en_curso" en vez de "discrepancia"/"anomalia", para no generar
+  // alertas falsas todos los dias mientras la jornada avanza.
+  const hoyLocal = fechaLocalDesdeUTC(new Date().toISOString());
 
   const inicioUTC = new Date(inicioDiaLocalComoUTC(desde)).toISOString();
   const finUTC = new Date(inicioDiaLocalComoUTC(hasta) + 24 * 60 * 60 * 1000).toISOString();
@@ -250,35 +257,43 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
       dia.facturacionTotal = resumenOficial.facturacionUsd;
     }
 
-    // Verificacion automatica contra los numeros oficiales de Hotmart -- el mismo metodo
-    // que usamos para encontrar y corregir los bugs de zona horaria/conversion de moneda,
-    // pero corriendo solo en cada sincronizacion en vez de a mano.
-    let estado: "ok" | "sin_datos" | "discrepancia" = "sin_datos";
-    if (resumenOficial !== undefined) {
-      const itemsCoinciden = itemsPropios === resumenOficial.totalItems;
-      const factorRazonable = factorCorreccion === null || (factorCorreccion >= 0.7 && factorCorreccion <= 1.3);
-      estado = itemsCoinciden && factorRazonable ? "ok" : "discrepancia";
-    }
-    dia.verificacion = {
-      estado,
-      itemsPropios,
-      itemsHotmart: resumenOficial?.totalItems ?? null,
-      factorCorreccion,
-    };
+    if (dia.fecha === hoyLocal) {
+      // El dia de hoy nunca va a calzar con Hotmart (que tampoco ha cerrado el dia) ni con
+      // el promedio de 7 dias completos de Meta -- se marca "en_curso" en vez de correr las
+      // verificaciones normales, para no disparar alertas falsas en cada sync intradia.
+      dia.verificacion = { estado: "en_curso", itemsPropios, itemsHotmart: resumenOficial?.totalItems ?? null, factorCorreccion };
+      dia.verificacionMeta = { estado: "en_curso", promedioAnterior: null };
+    } else {
+      // Verificacion automatica contra los numeros oficiales de Hotmart -- el mismo metodo
+      // que usamos para encontrar y corregir los bugs de zona horaria/conversion de moneda,
+      // pero corriendo solo en cada sincronizacion en vez de a mano.
+      let estado: "ok" | "sin_datos" | "discrepancia" = "sin_datos";
+      if (resumenOficial !== undefined) {
+        const itemsCoinciden = itemsPropios === resumenOficial.totalItems;
+        const factorRazonable = factorCorreccion === null || (factorCorreccion >= 0.7 && factorCorreccion <= 1.3);
+        estado = itemsCoinciden && factorRazonable ? "ok" : "discrepancia";
+      }
+      dia.verificacion = {
+        estado,
+        itemsPropios,
+        itemsHotmart: resumenOficial?.totalItems ?? null,
+        factorCorreccion,
+      };
 
-    // Meta no tiene un endpoint de "resumen oficial" como Hotmart para comparar exacto.
-    // En su lugar, detectamos caidas anomalas de inversion contra el promedio de los 7
-    // dias anteriores -- una senal tipica de que algo se rompio (token vencido, cuenta
-    // perdida) en vez de una baja real de actividad publicitaria.
-    const diasAnteriores: number[] = [];
-    for (let i = 1; i <= 7; i++) {
-      const valor = inversionPorFecha.get(restarDias(dia.fecha, i));
-      if (valor !== undefined) diasAnteriores.push(valor);
-    }
-    if (diasAnteriores.length >= 4) {
-      const promedioAnterior = diasAnteriores.reduce((a, b) => a + b, 0) / diasAnteriores.length;
-      const esAnomalia = promedioAnterior > 100 && dia.inversion < promedioAnterior * 0.15;
-      dia.verificacionMeta = { estado: esAnomalia ? "anomalia" : "ok", promedioAnterior };
+      // Meta no tiene un endpoint de "resumen oficial" como Hotmart para comparar exacto.
+      // En su lugar, detectamos caidas anomalas de inversion contra el promedio de los 7
+      // dias anteriores -- una senal tipica de que algo se rompio (token vencido, cuenta
+      // perdida) en vez de una baja real de actividad publicitaria.
+      const diasAnteriores: number[] = [];
+      for (let i = 1; i <= 7; i++) {
+        const valor = inversionPorFecha.get(restarDias(dia.fecha, i));
+        if (valor !== undefined) diasAnteriores.push(valor);
+      }
+      if (diasAnteriores.length >= 4) {
+        const promedioAnterior = diasAnteriores.reduce((a, b) => a + b, 0) / diasAnteriores.length;
+        const esAnomalia = promedioAnterior > 100 && dia.inversion < promedioAnterior * 0.15;
+        dia.verificacionMeta = { estado: esAnomalia ? "anomalia" : "ok", promedioAnterior };
+      }
     }
 
     dia.cpc = dia.clics > 0 ? dia.inversion / dia.clics : null;
