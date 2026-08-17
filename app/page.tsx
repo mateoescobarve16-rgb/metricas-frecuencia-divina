@@ -28,10 +28,10 @@ function sumar(resumen: ResumenDia[], campo: (d: ResumenDia) => number) {
   return resumen.reduce((acc, d) => acc + campo(d), 0);
 }
 
-function flechaDia(actual: number | null, anterior: number | null | undefined) {
+function flechaDia(actual: number | null, anterior: number | null | undefined, menorEsMejor = false) {
   if (actual === null || anterior === null || anterior === undefined) return null;
   const base = Math.max(Math.abs(anterior), 1);
-  const cambio = (actual - anterior) / base;
+  const cambio = ((actual - anterior) / base) * (menorEsMejor ? -1 : 1);
   if (Math.abs(cambio) < 0.005) return { icono: "≈", color: "var(--text-muted)" };
   return cambio > 0 ? { icono: "▲", color: "var(--positive-text)" } : { icono: "▼", color: "var(--negative-text)" };
 }
@@ -306,6 +306,12 @@ export default async function Home({
               const flechaFacturacion = flechaDia(dia.facturacionTotal, diaAnterior?.facturacionTotal);
               const flechaRoas = flechaDia(dia.roasNuevo, diaAnterior?.roasNuevo);
               const flechaLucro = flechaDia(dia.lucro, diaAnterior?.lucro);
+              const flechaCpc = flechaDia(dia.cpc, diaAnterior?.cpc, true);
+              const flechaCtr = flechaDia(dia.ctr, diaAnterior?.ctr);
+              const flechaCpm = flechaDia(dia.cpm, diaAnterior?.cpm, true);
+              const flechaCostoVisita = flechaDia(dia.costoPorVisita, diaAnterior?.costoPorVisita, true);
+              const flechaCostoPago = flechaDia(dia.costoPorPagoIniciado, diaAnterior?.costoPorPagoIniciado, true);
+              const flechaCpa = flechaDia(dia.cpa, diaAnterior?.cpa, true);
               return (
                 <tr key={dia.fecha} style={{ background: filaBg }}>
                   <td
@@ -328,14 +334,32 @@ export default async function Home({
                   </td>
                   <td style={tdStyle(filaBg)}>{formatoNumero(dia.impresiones)}</td>
                   <td style={tdStyle(filaBg)}>{formatoNumero(dia.clics)}</td>
-                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.cpc)}</td>
-                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoPct(dia.ctr)}</td>
-                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.cpm)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>
+                    {formatoUsdPreciso(dia.cpc)}
+                    <Flecha f={flechaCpc} />
+                  </td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>
+                    {formatoPct(dia.ctr)}
+                    <Flecha f={flechaCtr} />
+                  </td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>
+                    {formatoUsdPreciso(dia.cpm)}
+                    <Flecha f={flechaCpm} />
+                  </td>
                   <td style={tdStyle(filaBg)}>{formatoNumero(dia.landingPageViews)}</td>
-                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.costoPorVisita)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>
+                    {formatoUsdPreciso(dia.costoPorVisita)}
+                    <Flecha f={flechaCostoVisita} />
+                  </td>
                   <td style={tdStyle(filaBg)}>{formatoNumero(dia.pagosIniciados)}</td>
-                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.costoPorPagoIniciado)}</td>
-                  <td style={{ ...tdStyle(filaBg), fontWeight: 500 }}>{formatoUsdPreciso(dia.cpa)}</td>
+                  <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>
+                    {formatoUsdPreciso(dia.costoPorPagoIniciado)}
+                    <Flecha f={flechaCostoPago} />
+                  </td>
+                  <td style={{ ...tdStyle(filaBg), fontWeight: 500 }}>
+                    {formatoUsdPreciso(dia.cpa)}
+                    <Flecha f={flechaCpa} />
+                  </td>
                   {CATEGORIAS_EMBUDO.map((c, i) => {
                     const conteoDia = dia.porCategoria[c].conteo;
                     const frontEndDia = dia.porCategoria.front_end.conteo;
@@ -377,7 +401,7 @@ export default async function Home({
       </div>
       <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 10 }}>
         <span style={{ borderLeft: "3px solid var(--negative)", paddingLeft: 6 }}>Barra roja a la izquierda</span> = día con alguna alerta de verificación. Celda de ROAS (nuevo) en verde/rojo según si superó 1.0 (el gasto se pagó solo) o no.
-        Las flechitas (▲ ▼ ≈) junto a Inversión, ROAS (nuevo), Facturación total y Lucro comparan ese día contra el día calendario anterior.
+        Las flechitas (▲ ▼ ≈) comparan ese día contra el día calendario anterior. En Inversión, ROAS (nuevo), Facturación total, Lucro y CTR: ▲ verde = subió (bueno). En CPC, CPM, Costo/Visita, Costo/Pago iniciado y CPA (costos): ▲ verde = bajó (bueno) — más barato es mejor, por eso ahí la flecha va invertida.
       </p>
     </main>
   );
