@@ -28,6 +28,14 @@ function sumar(resumen: ResumenDia[], campo: (d: ResumenDia) => number) {
   return resumen.reduce((acc, d) => acc + campo(d), 0);
 }
 
+function flechaDia(actual: number | null, anterior: number | null | undefined) {
+  if (actual === null || anterior === null || anterior === undefined) return null;
+  const base = Math.max(Math.abs(anterior), 1);
+  const cambio = (actual - anterior) / base;
+  if (Math.abs(cambio) < 0.005) return { icono: "≈", color: "var(--text-muted)" };
+  return cambio > 0 ? { icono: "▲", color: "var(--positive-text)" } : { icono: "▼", color: "var(--negative-text)" };
+}
+
 function tendencia(actual: number, anterior: number): { texto: string; color: string; bg: string } {
   if (anterior <= 0) return { texto: "—", color: "var(--text-muted)", bg: "transparent" };
   const cambio = ((actual - anterior) / anterior) * 100;
@@ -103,6 +111,13 @@ export default async function Home({
   const conteoPorCategoria: Record<CategoriaFunnel, number> = Object.fromEntries(
     CATEGORIAS.map((c) => [c, sumar(resumen, (d) => d.porCategoria[c].conteo)])
   ) as Record<CategoriaFunnel, number>;
+
+  // Para la flecha dia-a-dia en la tabla: el dia anterior a cada fila casi siempre esta
+  // dentro de "resumen" mismo, salvo el primero del rango, que necesita el ultimo dia de
+  // "resumenAnterior" (ya lo estamos trayendo para las tendencias de las tarjetas KPI).
+  const mapaPorFecha = new Map<string, ResumenDia>();
+  for (const d of resumenAnterior) mapaPorFecha.set(d.fecha, d);
+  for (const d of resumen) mapaPorFecha.set(d.fecha, d);
 
   const kpis = [
     { label: "Inversión", valor: formatoUsd(totalInversion), tend: tendencia(totalInversion, invAnterior) },
@@ -286,6 +301,11 @@ export default async function Home({
               const tieneAlerta = dia.verificacion.estado === "discrepancia" || dia.verificacionMeta.estado === "anomalia";
               const roasColor = dia.roasNuevo === null ? "var(--text-primary)" : dia.roasNuevo >= 1 ? "var(--positive-text)" : "var(--negative-text)";
               const roasBg = dia.roasNuevo === null ? "transparent" : dia.roasNuevo >= 1 ? "var(--positive-bg)" : "var(--negative-bg)";
+              const diaAnterior = mapaPorFecha.get(restarDias(dia.fecha, 1));
+              const flechaInversion = flechaDia(dia.inversion, diaAnterior?.inversion);
+              const flechaFacturacion = flechaDia(dia.facturacionTotal, diaAnterior?.facturacionTotal);
+              const flechaRoas = flechaDia(dia.roasNuevo, diaAnterior?.roasNuevo);
+              const flechaLucro = flechaDia(dia.lucro, diaAnterior?.lucro);
               return (
                 <tr key={dia.fecha} style={{ background: filaBg }}>
                   <td
@@ -302,7 +322,10 @@ export default async function Home({
                   >
                     {dia.fecha}
                   </td>
-                  <td style={tdStyle(filaBg)}>{formatoUsd(dia.inversion)}</td>
+                  <td style={tdStyle(filaBg)}>
+                    {formatoUsd(dia.inversion)}
+                    <Flecha f={flechaInversion} />
+                  </td>
                   <td style={tdStyle(filaBg)}>{formatoNumero(dia.impresiones)}</td>
                   <td style={tdStyle(filaBg)}>{formatoNumero(dia.clics)}</td>
                   <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>{formatoUsdPreciso(dia.cpc)}</td>
@@ -327,8 +350,12 @@ export default async function Home({
                   <td style={{ ...tdStyle(filaBg), fontWeight: 500, borderLeft: "1px solid var(--border-strong)" }}>{formatoUsd(dia.facturacionNuevaTotal)}</td>
                   <td style={{ ...tdStyle(filaBg), color: roasColor, background: roasBg === "transparent" ? filaBg : roasBg, fontWeight: 500 }}>
                     {dia.roasNuevo !== null ? dia.roasNuevo.toFixed(2) : "—"}
+                    <Flecha f={flechaRoas} />
                   </td>
-                  <td style={tdStyle(filaBg)}>{formatoUsd(dia.facturacionTotal)}</td>
+                  <td style={tdStyle(filaBg)}>
+                    {formatoUsd(dia.facturacionTotal)}
+                    <Flecha f={flechaFacturacion} />
+                  </td>
                   <td style={tdStyle(filaBg)}>{formatoUsd(dia.arpu)}</td>
                   <td style={tdStyle(filaBg)}>{dia.roas !== null ? dia.roas.toFixed(2) : "—"}</td>
                   <td
@@ -340,6 +367,7 @@ export default async function Home({
                     }}
                   >
                     {formatoUsd(dia.lucro)}
+                    <Flecha f={flechaLucro} />
                   </td>
                 </tr>
               );
@@ -349,8 +377,18 @@ export default async function Home({
       </div>
       <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 10 }}>
         <span style={{ borderLeft: "3px solid var(--negative)", paddingLeft: 6 }}>Barra roja a la izquierda</span> = día con alguna alerta de verificación. Celda de ROAS (nuevo) en verde/rojo según si superó 1.0 (el gasto se pagó solo) o no.
+        Las flechitas (▲ ▼ ≈) junto a Inversión, ROAS (nuevo), Facturación total y Lucro comparan ese día contra el día calendario anterior.
       </p>
     </main>
+  );
+}
+
+function Flecha({ f }: { f: { icono: string; color: string } | null }) {
+  if (!f) return null;
+  return (
+    <span style={{ color: f.color, fontSize: 11, marginLeft: 5 }} title="vs. día anterior">
+      {f.icono}
+    </span>
   );
 }
 
