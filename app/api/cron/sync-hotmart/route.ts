@@ -21,7 +21,10 @@ export async function GET(req: Request) {
 
   if (desdeParam && hastaParam) {
     inicioVentanaUTC = inicioDiaLocalComoUTC(desdeParam);
-    inicioHoyUTC = inicioDiaLocalComoUTC(hastaParam) + UN_DIA_MS;
+    // Si "hasta" es hoy (sync intradia) y el dia todavia no termina, pedirle a Hotmart
+    // hasta la medianoche de manana es un rango a futuro -- su API lo rechaza con
+    // 400 invalid_parameter. Topamos el limite superior en el momento actual real.
+    inicioHoyUTC = Math.min(inicioDiaLocalComoUTC(hastaParam) + UN_DIA_MS, Date.now());
   } else {
     const hoyLocal = fechaLocalDesdeUTC(new Date().toISOString());
 
