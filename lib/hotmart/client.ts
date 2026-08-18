@@ -79,6 +79,27 @@ export async function listarVentasPorRango(startDate: number, endDate: number): 
   return ventas;
 }
 
+// Busca una transaccion puntual por su codigo. A diferencia de listarVentasPorRango, esto
+// SI devuelve transacciones que cambiaron de estado despues de su fecha original (ej. un
+// contracargo/protesta) -- Hotmart deja de listarlas en la consulta por rango una vez
+// cambian de estado, pero siguen existiendo y se pueden consultar por codigo. Devuelve null
+// si la transaccion ya no existe en absoluto (caso raro, ver SIN_RASTRO_EN_HOTMART).
+export async function buscarTransaccion(transactionId: string): Promise<VentaHotmart | null> {
+  const accessToken = await obtenerAccessToken();
+
+  const url = new URL("https://developers.hotmart.com/payments/api/v1/sales/history");
+  url.searchParams.set("transaction", transactionId);
+
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) {
+    throw new Error(`Error consultando transaccion ${transactionId} de Hotmart: ${res.status} ${await res.text()}`);
+  }
+
+  const body = await res.json();
+  const item = body.items?.[0];
+  return item ? mapearItem(item) : null;
+}
+
 // El endpoint de "resumen" de Hotmart ya trae la facturacion convertida a USD usando la
 // tasa de cambio INTERNA de Hotmart (la misma que muestra su propio panel/"Faturamento").
 // Nuestra propia conversion via una API de tasas externa no coincide exacto con eso,
