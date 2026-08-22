@@ -45,6 +45,7 @@ export type ResumenDia = {
   costoPorVisita: number | null;
   pagosIniciados: number;
   costoPorPagoIniciado: number | null;
+  conversionCheckout: number | null;
   cpa: number | null;
   porCategoria: Record<CategoriaFunnel, { conteo: number; conteoNuevo: number; facturacion: number; facturacionNueva: number }>;
   facturacionTotal: number;
@@ -170,6 +171,7 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
         costoPorVisita: null,
         pagosIniciados: 0,
         costoPorPagoIniciado: null,
+        conversionCheckout: null,
         cpa: null,
         porCategoria: categoriaVacia(),
         facturacionTotal: 0,
@@ -301,6 +303,9 @@ export async function obtenerResumenDiario(desde: string, hasta: string): Promis
     dia.cpm = dia.impresiones > 0 ? (dia.inversion / dia.impresiones) * 1000 : null;
     dia.costoPorVisita = dia.landingPageViews > 0 ? dia.inversion / dia.landingPageViews : null;
     dia.costoPorPagoIniciado = dia.pagosIniciados > 0 ? dia.inversion / dia.pagosIniciados : null;
+    // De los que iniciaron el pago (checkout), cuantos terminan completando la compra del
+    // front-end -- misma etapa del embudo que "pagos iniciados", no todo el embudo completo.
+    dia.conversionCheckout = dia.pagosIniciados > 0 ? (dia.porCategoria.front_end.conteo / dia.pagosIniciados) * 100 : null;
     dia.cpa = dia.porCategoria.front_end.conteo > 0 ? dia.inversion / dia.porCategoria.front_end.conteo : null;
 
     dia.usuariosUnicos = compradoresPorFecha.get(dia.fecha)?.size ?? 0;

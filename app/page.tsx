@@ -279,12 +279,12 @@ export default async function Home({
               <th rowSpan={2} style={{ ...thGrupoStyle, position: "sticky", left: 0, zIndex: 2, textAlign: "left" }}>
                 Fecha
               </th>
-              <th colSpan={11} style={thGrupoStyle}>Meta Ads</th>
+              <th colSpan={12} style={thGrupoStyle}>Meta Ads</th>
               <th colSpan={7} style={{ ...thGrupoStyle, borderLeft: "1px solid var(--border-strong)" }}>Embudo</th>
               <th colSpan={6} style={{ ...thGrupoStyle, borderLeft: "1px solid var(--border-strong)" }}>Resultado</th>
             </tr>
             <tr style={{ borderBottom: "0.5px solid var(--border)", background: "var(--surface-1)" }}>
-              {["Inversión", "Impresiones", "Clics", "CPC", "CTR", "CPM", "Visitas LP", "Costo/Visita", "Pagos iniciados", "Costo/Pago iniciado", "CPA"].map((h, i) => (
+              {["Inversión", "Impresiones", "Clics", "CPC", "CTR", "CPM", "Visitas LP", "Costo/Visita", "Pagos iniciados", "Costo/Pago iniciado", "Conv. checkout", "CPA"].map((h, i) => (
                 <th key={h} style={{ ...thColStyle, ...(esColumnaSecundaria(h) ? { color: "var(--text-muted)", fontWeight: 400 } : {}), ...(i === 0 ? {} : {}) }}>
                   {h}
                 </th>
@@ -321,6 +321,7 @@ export default async function Home({
               const flechaCpm = flechaDia(dia.cpm, diaAnterior?.cpm, true);
               const flechaCostoVisita = flechaDia(dia.costoPorVisita, diaAnterior?.costoPorVisita, true);
               const flechaCostoPago = flechaDia(dia.costoPorPagoIniciado, diaAnterior?.costoPorPagoIniciado, true);
+              const flechaConversionCheckout = flechaDia(dia.conversionCheckout, diaAnterior?.conversionCheckout);
               const flechaCpa = flechaDia(dia.cpa, diaAnterior?.cpa, true);
               return (
                 <tr key={dia.fecha} style={{ background: filaBg }}>
@@ -379,6 +380,10 @@ export default async function Home({
                   <td style={{ ...tdStyle(filaBg), color: "var(--text-muted)" }}>
                     {formatoUsdPreciso(dia.costoPorPagoIniciado)}
                     <Flecha f={flechaCostoPago} />
+                  </td>
+                  <td style={{ ...tdStyle(filaBg), fontWeight: 500 }}>
+                    {formatoPct(dia.conversionCheckout)}
+                    <Flecha f={flechaConversionCheckout} />
                   </td>
                   <td style={{ ...tdStyle(filaBg), fontWeight: 500 }}>
                     {formatoUsdPreciso(dia.cpa)}
